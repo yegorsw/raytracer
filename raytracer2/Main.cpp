@@ -128,7 +128,7 @@ Pixel renderPixel(Ray& ray, Scene& scene, int depth=0)
 			}
 			outPixel *= invShaderSamples;
 			outPixel.a = 1.0;
-			return outPixel;//test
+			return outPixel;
 		}
 	}
 	else//if depth == SCN_MAXDEPTH (last bounce)
@@ -252,3 +252,5 @@ double l = length(sx, sy);
 sx = (sx * (1 - sqrt(1 - l * l))) * curvature + sx * (1.0 - curvature);
 sy = (sy * (1 - sqrt(1 - l * l))) * curvature + sy * (1.0 - curvature);
 */
+
+//YAY IT WORKS!!
