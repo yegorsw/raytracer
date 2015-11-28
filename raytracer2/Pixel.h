@@ -6,6 +6,7 @@ class Pixel
 public:
 	Color color;
 	double a = 0;
+	Color samples;
 
 	//defalt contructor
 	Pixel()

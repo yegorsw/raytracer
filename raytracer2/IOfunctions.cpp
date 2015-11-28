@@ -95,7 +95,7 @@ Scene readObj(string filename){
 	return newScene;
 }
 
-void writePPM(Screen &screenIn, string filename){
+void writePPM(Screen &screenIn, string filename, string mode){
 
 	cout << "Writing " + filename << endl;
 
@@ -106,16 +106,33 @@ void writePPM(Screen &screenIn, string filename){
 	outputFile << "P3\n" << screenIn.xres << " " << screenIn.yres << " 256\n";
 	Pixel currentPixel;
 
-	for (int y = 0; y < screenIn.yres; y++){
-		for (int x = 0; x < screenIn.xres; x++){
-			currentPixel = screenIn.getPixel(x, y);
-			double a = currentPixel.a;
-			string r = padInt((int)(clamp(currentPixel.color.r * a, 0, 1) * 255));
-			string g = padInt((int)(clamp(currentPixel.color.g * a, 0, 1) * 255));
-			string b = padInt((int)(clamp(currentPixel.color.b * a, 0, 1) * 255));
-			outputFile << r << g << b;
+	if (mode == "rgba")
+	{
+		for (int y = 0; y < screenIn.yres; y++){
+			for (int x = 0; x < screenIn.xres; x++){
+				currentPixel = screenIn.getPixel(x, y);
+				double a = currentPixel.a;
+				string r = padInt((int)(clamp(currentPixel.color.r * a, 0, 1) * 255));
+				string g = padInt((int)(clamp(currentPixel.color.g * a, 0, 1) * 255));
+				string b = padInt((int)(clamp(currentPixel.color.b * a, 0, 1) * 255));
+				outputFile << r << g << b;
+			}
+			outputFile << '\n';
 		}
-		outputFile << '\n';
+	}
+	else if (mode == "samples")
+	{
+		for (int y = 0; y < screenIn.yres; y++){
+			for (int x = 0; x < screenIn.xres; x++){
+				currentPixel = screenIn.getPixel(x, y);
+				double a = currentPixel.a;
+				string r = padInt((int)(clamp(currentPixel.samples.r * a, 0, 1) * 255));
+				string g = padInt((int)(clamp(currentPixel.samples.g * a, 0, 1) * 255));
+				string b = padInt((int)(clamp(currentPixel.samples.b * a, 0, 1) * 255));
+				outputFile << r << g << b;
+			}
+			outputFile << '\n';
+		}
 	}
 
 	outputFile.close();

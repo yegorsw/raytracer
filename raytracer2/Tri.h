@@ -84,14 +84,11 @@ public:
 
 	double intersect(Ray& ray)
 	{
-		if (ray.dir.dot(n) >= 0)
-			return 0.0;
-
 		Vec pvec = ray.dir.cross(edge02);
 		double det = edge01.dot(pvec);
 		
 		//if ray is parallel with triangle
-		if (det > -0.000001 && det < 0.000001)
+		if (det < 0.000001)// && det > -0.000001) uncomment to disable backface culling
 			return 0.0;
 		
 		double invDet = 1.0 / det;

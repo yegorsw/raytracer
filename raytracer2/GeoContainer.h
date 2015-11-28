@@ -85,7 +85,7 @@ public:
 			newContainer.calculateBbox();
 			children.push_back(newContainer);
 		}
-			
+		calculateBbox();
 	}
 
 	void printInfo()

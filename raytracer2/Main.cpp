@@ -17,18 +17,21 @@
 //#define DEBUG_OUTPUTSAMPLES
 
 ////SCENE SETUP////
-const int IMG_W = 400;
-const int IMG_H = 400;
+const int IMG_W = 250;
+const int IMG_H = 250;
 
 const double SCN_MAXDIST = 5000;
 const double SCN_MAXRAYDIST = 5000;
 const double SCN_RAYBIAS = 0.1;
 const int SCN_MAXDEPTH = 1;
 
-const int SCN_SHADERSAMPLES = 2;
-const int SAMP_MINSAMPLES = 8;
+const int SHD_MINSAMPLES = 2;
+const int SHD_MAXSAMPLES = 2;
+const double SHD_MINVARIANCE = 0.1;
+
+const int SAMP_MINSAMPLES = 4;
 const int SAMP_MAXSAMPLES = 256;
-const double SAMP_MINVARIANCE = 0.01;
+const double SAMP_MINVARIANCE = 0.1;
 
 const bool SCN_JITTER = true;
 
@@ -39,7 +42,6 @@ unsigned int g_boxIntersections = 0;
 
 const double invRandMax2 = (2.0 / (double)RAND_MAX);
 const double invRandMax = (1.0 / (double)RAND_MAX);
-const double invShaderSamples = 1.0 / (double)SCN_SHADERSAMPLES;
 
 using namespace std;
 
@@ -79,17 +81,20 @@ Pixel renderPixel(Ray& ray, Scene& scene, int depth=0)
 	{
 		Mesh& mesh = scene.meshes[obj];
 
-		if (mesh.numberOfTris() >= 4)
-			g_boxIntersections++;
-
 		//skip bounding box intersection test if mesh has less than 4 trianges
 		intersectDist = mesh.boundingBox.intersect(ray);
+		g_boxIntersections++;
+
+
+
 		if (mesh.boundingBox.contains(ray.p) || (intersectDist > 0.0 && intersectDist < shortestDist))
 		{
 			for (int tri = 0; tri < mesh.numberOfTris(); tri++)
 			{
-				g_triIntersections++;
+				
 				intersectDist = mesh.triList[tri].intersect(ray);
+				g_triIntersections++;
+
 				if (intersectDist > 0 && intersectDist < shortestDist)
 				{
 					shortestDist = intersectDist;
@@ -125,7 +130,7 @@ Pixel renderPixel(Ray& ray, Scene& scene, int depth=0)
 			Ray indirectRay;
 			indirectRay.setPos(ray.p + (ray.dir * shortestDist) + ((*closestTri).n * SCN_RAYBIAS));
 
-			for (int i = 0; i < SCN_SHADERSAMPLES; i++)
+			for (int i = 0; i < SHD_MAXSAMPLES; i++)
 			{
 				indirectRay.setDir(randfneg(), randfneg(), randfneg());
 				indirectRay.dir.normalize();
@@ -137,7 +142,7 @@ Pixel renderPixel(Ray& ray, Scene& scene, int depth=0)
 				}
 				outPixel += renderPixel(indirectRay, scene, depth + 1);
 			}
-			outPixel *= invShaderSamples;
+			outPixel /= SHD_MAXSAMPLES;
 			outPixel.a = 1.0;
 			return outPixel;
 		}
@@ -157,7 +162,9 @@ int main()
 
 	string objfile = "lamp";
 	Scene myScene = readObj("D:/Users/Yegor/Desktop/raytracer/objects/"+objfile+".obj");
-	myScene.printInfo();
+	//myScene.printInfo();
+
+	//myScene.buildBboxHierarchy();
 
 	Screen myScreen(IMG_W, IMG_H);
 	Ray primaryRay;
@@ -191,12 +198,11 @@ int main()
 		{
 			varianceCombo = 0;
 			//for each sample
-			for (int s = 0; s < SAMP_MAXSAMPLES; s++)
+			double s = 1.0;
+			while (varianceCombo < SAMP_MINSAMPLES && s <= SAMP_MAXSAMPLES)
 			{
 				sx = ((x + randfneg()*0.5 - IMG_W * 0.5) / (float)IMG_H) * 2;
 				sy = ((y + randfneg()*0.5 - IMG_H * 0.5) / (float)IMG_H) * -2;
-
-				ss = (double)s + 1.0;
 
 				primaryRay.setDir(sx* 0.6, sy*0.6, -1.0);
 				primaryRay.dir.normalize();
@@ -204,29 +210,22 @@ int main()
 				variance = currentPixel;
 
 				renderedPixel = renderPixel(primaryRay, myScene);
-				renderedPixel *= 1.0 / ss;
-				currentPixel *= (ss - 1.0) / ss;
+				renderedPixel *= 1.0 / s;
+				currentPixel *= (s - 1.0) / s;
 				currentPixel += renderedPixel;
 
 				variance -= currentPixel;
 
-				if (s >= SAMP_MINSAMPLES)
-				{
-					if (variance.magnitude() < SAMP_MINVARIANCE)
-					{
-						varianceCombo++;
-						if (varianceCombo > SAMP_MINSAMPLES)
-							break;
-					}
-					else
-					{
-						varianceCombo = 0;
-					}
-				}
+				if (variance.magnitude() < SAMP_MINVARIANCE)
+					varianceCombo++;
+				else
+					varianceCombo = 0;
+
+				s++;
 			}
 
 #ifdef DEBUG_OUTPUTSAMPLES
-			double samplesUsed = ss / (double)SAMP_MAXSAMPLES;
+			double samplesUsed = s / (double)SAMP_MAXSAMPLES;
 			currentPixel.setColor(samplesUsed, samplesUsed, samplesUsed);
 			currentPixel.setAlpha(1);
 #endif
@@ -257,7 +256,7 @@ int main()
 	cout << g_boxIntersections << " box intersections tested." << endl;
 	//myScreen.invertRGB();
 	//myScreen.constantAlpha();
-	writePPM(myScreen, "D:/Users/Yegor/Desktop/raytracer/"+objfile+".ppm");
+	writePPM(myScreen, "D:/Users/Yegor/Desktop/raytracer/"+objfile+".ppm", "rgba");
 	//myScene.printInfo();
 }
 
