@@ -84,6 +84,9 @@ public:
 
 	double intersect(Ray& ray)
 	{
+		if (ray.dir.dot(n) >= 0)
+			return 0.0;
+
 		Vec pvec = ray.dir.cross(edge02);
 		double det = edge01.dot(pvec);
 		

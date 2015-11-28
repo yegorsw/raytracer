@@ -25,12 +25,16 @@ const double SCN_MAXRAYDIST = 5000;
 const double SCN_RAYBIAS = 0.1;
 const int SCN_MAXDEPTH = 1;
 
-const int SCN_SHADERSAMPLES = 1;
-const int SAMP_MINSAMPLES = 4;
-const int SAMP_MAXSAMPLES = 512;
-const double SAMP_MINVARIANCE = 0.1;
+const int SCN_SHADERSAMPLES = 2;
+const int SAMP_MINSAMPLES = 8;
+const int SAMP_MAXSAMPLES = 256;
+const double SAMP_MINVARIANCE = 0.01;
 
 const bool SCN_JITTER = true;
+
+unsigned int g_triIntersections = 0;
+unsigned int g_boxIntersections = 0;
+
 ////END OF SCENE SETUP////
 
 const double invRandMax2 = (2.0 / (double)RAND_MAX);
@@ -61,8 +65,8 @@ double randfneg()
 
 Pixel renderPixel(Ray& ray, Scene& scene, int depth=0)
 {
-	double intersectDist = 0;
-	double shortestDist = 0;
+	double intersectDist;
+	double shortestDist;
 
 	if (depth > 0)
 		shortestDist = SCN_MAXDIST;
@@ -75,11 +79,16 @@ Pixel renderPixel(Ray& ray, Scene& scene, int depth=0)
 	{
 		Mesh& mesh = scene.meshes[obj];
 
+		if (mesh.numberOfTris() >= 4)
+			g_boxIntersections++;
+
 		//skip bounding box intersection test if mesh has less than 4 trianges
-		if (mesh.numberOfTris() < 4 || mesh.boundingBox.intersect(ray))
+		intersectDist = mesh.boundingBox.intersect(ray);
+		if (mesh.boundingBox.contains(ray.p) || (intersectDist > 0.0 && intersectDist < shortestDist))
 		{
 			for (int tri = 0; tri < mesh.numberOfTris(); tri++)
 			{
+				g_triIntersections++;
 				intersectDist = mesh.triList[tri].intersect(ray);
 				if (intersectDist > 0 && intersectDist < shortestDist)
 				{
@@ -136,17 +145,17 @@ Pixel renderPixel(Ray& ray, Scene& scene, int depth=0)
 	else//if depth == SCN_MAXDEPTH (last bounce)
 	{
 		if (shortestDist < SCN_MAXDIST)
-			return Pixel(1, 1, 1, 1);
+			return Pixel(0, 0, 0, 1);
 	}
 
-	return Pixel(0, 0, 0, 0);
+	return Pixel(1, 1, 1, 0);
 }
 
 int main()
 {
 	srand(12345);
 
-	string objfile = "simpleboxes3split";
+	string objfile = "lamp";
 	Scene myScene = readObj("D:/Users/Yegor/Desktop/raytracer/objects/"+objfile+".obj");
 	myScene.printInfo();
 
@@ -219,6 +228,7 @@ int main()
 #ifdef DEBUG_OUTPUTSAMPLES
 			double samplesUsed = ss / (double)SAMP_MAXSAMPLES;
 			currentPixel.setColor(samplesUsed, samplesUsed, samplesUsed);
+			currentPixel.setAlpha(1);
 #endif
 
 			myScreen.setPixel(x, y, currentPixel);
@@ -243,8 +253,9 @@ int main()
 	clock_t end = clock();
 	double rendertime = double(end - begin) / CLOCKS_PER_SEC;
 	cout << endl << "Render time: " << rendertime<< endl;
-
-	myScreen.invertRGB();
+	cout << g_triIntersections << " triangle intersections tested." << endl;
+	cout << g_boxIntersections << " box intersections tested." << endl;
+	//myScreen.invertRGB();
 	//myScreen.constantAlpha();
 	writePPM(myScreen, "D:/Users/Yegor/Desktop/raytracer/"+objfile+".ppm");
 	//myScene.printInfo();
