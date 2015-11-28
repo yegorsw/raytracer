@@ -74,7 +74,9 @@ Pixel renderPixel(Ray& ray, Scene& scene, int depth=0)
 	for (int obj = 0; obj < scene.numberOfMeshes(); obj++)
 	{
 		Mesh& mesh = scene.meshes[obj];
-		if (!mesh.hasBbox || mesh.boundingBox.intersect(ray))
+
+		//skip bounding box intersection test if mesh has less than 4 trianges
+		if (mesh.numberOfTris() < 4 || mesh.boundingBox.intersect(ray))
 		{
 			for (int tri = 0; tri < mesh.numberOfTris(); tri++)
 			{
@@ -144,8 +146,10 @@ int main()
 {
 	srand(12345);
 
-	string objfile = "lamp";
+	string objfile = "simpleboxes3split";
 	Scene myScene = readObj("D:/Users/Yegor/Desktop/raytracer/objects/"+objfile+".obj");
+	myScene.printInfo();
+
 	Screen myScreen(IMG_W, IMG_H);
 	Ray primaryRay;
 	Vec dir;
@@ -237,13 +241,13 @@ int main()
 	*/
 	
 	clock_t end = clock();
-	cout << endl << "Render time: " << double(end - begin) / CLOCKS_PER_SEC << endl;
+	double rendertime = double(end - begin) / CLOCKS_PER_SEC;
+	cout << endl << "Render time: " << rendertime<< endl;
 
 	myScreen.invertRGB();
 	//myScreen.constantAlpha();
 	writePPM(myScreen, "D:/Users/Yegor/Desktop/raytracer/"+objfile+".ppm");
 	//myScene.printInfo();
-	//int pause; cin >> pause;
 }
 
 
@@ -253,6 +257,29 @@ sx = (sx * (1 - sqrt(1 - l * l))) * curvature + sx * (1.0 - curvature);
 sy = (sy * (1 - sqrt(1 - l * l))) * curvature + sy * (1.0 - curvature);
 */
 
-//YAY IT WORKS!!
-//asdasda
-//asdasdv
+/*
+int *myPointer; 
+create a pointer
+
+*myPointer;
+dereference a pointer
+
+(*myPointer).setRGBValues()
+
+if there is a datatype preceding the '*', '*' means "pointer type", otherwise '*' means dereference
+
+myPointer = &myVar; 
+myPointer points to myVar
+
+OR
+
+int *myPointer = &myVar; myPointer points to myVar
+
+
+int* myPointer;
+myPointer = &y;
+x = *myPointer;
+
+same as x = y;
+
+*/

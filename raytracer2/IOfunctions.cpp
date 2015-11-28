@@ -59,8 +59,7 @@ Scene readObj(string filename){
 			{
 				if (lastLine == "f" || lastLine == "g")
 				{
-					if (newMesh.numberOfTris() > 5)
-						newMesh.generateBbox();
+					newMesh.generateBbox();
 
 					newScene.addMesh(newMesh);
 					newMesh.clear();
@@ -86,18 +85,19 @@ Scene readObj(string filename){
 			lastLine = splitLine[0];
 		}
 	}
-	if (newMesh.numberOfTris() > 5)
-		newMesh.generateBbox();
+	newMesh.generateBbox();
 
 	newScene.addMesh(newMesh);
 	objFile.close();
+
+	cout << "Finished Reading.";
 
 	return newScene;
 }
 
 void writePPM(Screen &screenIn, string filename){
 
-	cout << "Writing " + filename;
+	cout << "Writing " + filename << endl;
 
 	ofstream outputFile;
 	outputFile.open(filename);

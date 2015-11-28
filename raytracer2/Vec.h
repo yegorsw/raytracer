@@ -101,6 +101,16 @@ public:
 			);
 	}
 
+	Vec minVec(Vec &v)
+	{
+		return Vec(min(x, v.x), min(y, v.y), min(z, v.z));
+	}
+
+	Vec maxVec(Vec &v)
+	{
+		return Vec(max(x, v.x), max(y, v.y), max(z, v.z));
+	}
+
 	void printToConsole(){
 		cout << '[' << x << ", " << y << ", " << z << ']' << endl;
 	}

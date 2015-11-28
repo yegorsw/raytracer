@@ -13,7 +13,6 @@ private:
 public:
 	BBox boundingBox;
 	vector<Tri> triList;
-	bool hasBbox = false;
 	//constructor
 	Mesh()
 	{
@@ -60,13 +59,11 @@ public:
 			Vec(minX, minY, minZ), 
 			Vec(maxX, maxY, maxZ) 
 		};
-		hasBbox = true;
 	}
 
 	void clear()
 	{
 		triList.clear();
-		hasBbox = false;
 		//boundingBox = BBox();
 	}
 	

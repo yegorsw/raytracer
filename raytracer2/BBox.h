@@ -87,6 +87,16 @@ public:
 		return (minCoord + maxCoord) * 0.5;
 	}
 
+	double volume()
+	{
+		return (maxCoord.x - minCoord.x) * (maxCoord.y - minCoord.y) * (maxCoord.z - minCoord.z);
+	}
+
+	BBox merged(BBox& box)
+	{
+		return BBox(minCoord.minVec(box.minCoord), maxCoord.maxVec(box.maxCoord));
+	}
+
 	void printToConsole()
 	{
 		minCoord.printToConsole();

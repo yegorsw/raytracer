@@ -66,10 +66,10 @@
     <ClInclude Include="Scene.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="GeoBox.h">
+    <ClInclude Include="Mesh.h">
       <Filter>Header Files\classes\3d</Filter>
     </ClInclude>
-    <ClInclude Include="Mesh.h">
+    <ClInclude Include="GeoContainer.h">
       <Filter>Header Files\classes\3d</Filter>
     </ClInclude>
   </ItemGroup>
