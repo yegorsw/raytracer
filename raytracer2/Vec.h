@@ -82,6 +82,11 @@ public:
 			);
 	}
 
+	Vec operator-()
+	{
+		return Vec(-x, -y, -z);
+	}
+
 	Vec operator*(double n)
 	{
 		return Vec(

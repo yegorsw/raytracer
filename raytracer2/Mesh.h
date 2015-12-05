@@ -61,6 +61,31 @@ public:
 		};
 	}
 
+	bool intersect(Ray& ray, Tri*& closestTri, double& shortestDist)
+	{
+		bool contains = boundingBox.contains(ray.p);
+		double intersectDist = 0.0;
+
+		if (!contains)
+		{
+			intersectDist = boundingBox.intersect(ray);
+		}
+		if (contains || (intersectDist > 0.0 && intersectDist < shortestDist)){
+			for (int tri = 0; tri < numberOfTris(); tri++)
+			{
+				intersectDist = triList[tri].intersect(ray);
+
+				if (intersectDist > 0.0 && intersectDist < shortestDist)
+				{
+					shortestDist = intersectDist;
+
+					closestTri = &(triList[tri]);
+				}
+			}
+		}
+		return (intersectDist > 0.0);
+	}
+
 	void clear()
 	{
 		triList.clear();

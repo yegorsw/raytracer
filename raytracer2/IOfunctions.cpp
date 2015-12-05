@@ -46,6 +46,9 @@ Scene readObj(string filename){
 	vector<string> splitLine;
 	vector<Vec> verticies, normals;
 	string lastLine = "temp";
+
+	int totalTriCount = 0;
+	int totalMeshCount = 0;
 	//int mtlId = 0;
 	//string currentMat = "";
 	int i0, i1, i2;
@@ -57,11 +60,12 @@ Scene readObj(string filename){
 		{
 			if (splitLine[0] == "v")
 			{
-				if (lastLine == "f" || lastLine == "g")
+				if ((lastLine == "f" || lastLine == "g") && verticies.size() > 0)
 				{
 					newMesh.generateBbox();
 
 					newScene.addMesh(newMesh);
+					totalMeshCount++;
 					newMesh.clear();
 					//verticies.clear();
 					normals.clear();
@@ -80,6 +84,7 @@ Scene readObj(string filename){
 				Tri currentTri = { verticies[i0], verticies[i1], verticies[i2] };
 				//currentTri.setNormals(normals[i0], normals[i1], normals[i2]);
 				newMesh.addTri(currentTri);
+				totalTriCount++;
 				//currentTri.printToConsole();
 			}
 			lastLine = splitLine[0];
@@ -88,9 +93,10 @@ Scene readObj(string filename){
 	newMesh.generateBbox();
 
 	newScene.addMesh(newMesh);
+	totalMeshCount++;
 	objFile.close();
 
-	cout << "Finished Reading.";
+	cout << "Loaded " << totalTriCount << "tris among " << totalMeshCount << "meshes." << endl;
 
 	return newScene;
 }
