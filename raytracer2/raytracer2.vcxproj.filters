@@ -72,6 +72,9 @@
     <ClInclude Include="GeoContainer.h">
       <Filter>Header Files\classes\3d</Filter>
     </ClInclude>
+    <ClInclude Include="renderOverrides.h">
+      <Filter>Resource Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">

@@ -10,11 +10,7 @@
 #include "Scene.h"
 
 #include "IOfunctions.h"
-
-//#define DEBUG_OUTPUTALPHA
-//#define DEBUG_OUTPUTDIST
-//#define DEBUG_OUTPUTPOS
-//#define DEBUG_OUTPUTSAMPLES
+#include "renderOverrides.h"
 
 ////SCENE SETUP//// - 25.5 seconds
 const int IMG_W = 300;
@@ -35,7 +31,6 @@ const double SAMP_MINVARIANCE = 0.1;
 unsigned int g_triIntersections = 0;
 unsigned int g_boxIntersections = 0;
 
-const double invRandMax2 = (2.0 / (double)RAND_MAX);
 const double invRandMax = (1.0 / (double)RAND_MAX);
 
 using namespace std;
@@ -57,7 +52,7 @@ double randf()
 
 double randfneg()
 {
-	return (rand() * invRandMax2) - 1.0;
+	return (rand() * invRandMax * 2.0) - 1.0;
 }
 
 Pixel renderPixel(Ray& ray, Scene& scene, int depth = 0)
@@ -74,6 +69,13 @@ Pixel renderPixel(Ray& ray, Scene& scene, int depth = 0)
 	bool intersected;
 
 	intersected = scene.intersect(ray, closestTri, shortestDist);
+
+#ifdef DEBUG_OUTPUTBBOX
+	if (intersected && shortestDist < SCN_MAXDIST)
+		return Pixel(1, 1, 1, 1);
+	else
+		return Pixel(0, 0, 0, 0);
+#endif
 
 #ifdef DEBUG_OUTPUTDIST
 	shortestDist *= 0.01;
@@ -129,13 +131,13 @@ int main()
 {
 	srand(12345);
 
-	string objfile = "lamp";
+	string objfile = "simpleboxes3split";
 	Scene myScene = readObj("D:/Users/Yegor/Desktop/raytracer/objects/"+objfile+".obj");
 	cout << myScene.numberOfTris() << endl;
 
 	myScene.buildBboxHierarchy();
 	cout << myScene.numberOfTris() << endl;
-	//myScene.printToConsole();
+	myScene.printToConsole();
 
 	Screen myScreen(IMG_W, IMG_H);
 	Ray primaryRay;
@@ -162,10 +164,13 @@ int main()
 	//for each row
 	for (int y = 0; y < IMG_H; y++ )
 	{
+
+		//percentage output
 		if (!(y % 5))
 		{
 			cout << y << endl;
 		}
+
 		//for each pixel
 		for (int x = 0; x < IMG_W; x++ )
 		{
@@ -195,7 +200,8 @@ int main()
 					varianceCombo = 0;
 
 				s++;
-			}
+			}//end for each sample
+			
 
 #ifdef DEBUG_OUTPUTSAMPLES
 			double samplesUsed = s / (double)SAMP_MAXSAMPLES;
@@ -212,10 +218,12 @@ int main()
 				goto end_dump;
 			}
 
-		}
-	}
+		}//end for each pixel
+	}//end for each row
 	
+	//crtl+d early exit & dump pixels goto point
 	end_dump:
+
 	/*
 	Ray testRay;
 	testRay.setPos(Vec(0, -0.1, -15.5));
@@ -256,7 +264,8 @@ myPointer points to myVar
 
 OR
 
-int *myPointer = &myVar; myPointer points to myVar
+int *myPointer = &myVar; 
+myPointer points to myVar
 
 
 int* myPointer;

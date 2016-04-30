@@ -82,6 +82,11 @@ public:
 		return max(max(p0.z, p1.z), p2.z);
 	}
 
+	Vec center()
+	{
+		return (p0 + p1 + p2) * 0.33333333333333333333333333;
+	}
+
 	double intersect(Ray& ray)
 	{
 		Vec pvec = ray.dir.cross(edge02);
