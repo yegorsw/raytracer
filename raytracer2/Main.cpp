@@ -10,7 +10,13 @@
 #include "Scene.h"
 
 #include "IOfunctions.h"
-#include "renderOverrides.h"
+//#include "renderOverrides.h"
+
+//#define DEBUG_OUTPUTALPHA
+//#define DEBUG_OUTPUTDIST
+//#define DEBUG_OUTPUTPOS
+//#define DEBUG_OUTPUTSAMPLES
+//#define DEBUG_OUTPUTBBOX
 
 ////SCENE SETUP//// - 25.5 seconds
 const int IMG_W = 300;
@@ -18,14 +24,14 @@ const int IMG_H = 300;
 
 const double SCN_MAXDIST = 5000;
 const double SCN_MAXRAYDIST = 5000;
-const double SCN_RAYBIAS = 0.00001;
+const double SCN_RAYBIAS = 0.01;
 const int SCN_MAXDEPTH = 1;
 
-const int SHD_MAXSAMPLES = 2;
+const int SHD_MAXSAMPLES = 8;
 
-const int SAMP_MINSAMPLES = 16;
+const int SAMP_MINSAMPLES = 8;
 const int SAMP_MAXSAMPLES = 2048;
-const double SAMP_MINVARIANCE = 0.1;
+const double SAMP_MINVARIANCE = 0.001;
 ////END OF SCENE SETUP////
 
 unsigned int g_triIntersections = 0;
@@ -97,7 +103,7 @@ Pixel renderPixel(Ray& ray, Scene& scene, int depth = 0)
 	if (intersected){
 		if (depth < SCN_MAXDEPTH)
 		{
-			if (shortestDist < SCN_MAXDIST && closestTri != NULL)
+			if (shortestDist < SCN_MAXDIST)
 			{
 				Pixel outPixel;
 				Ray indirectRay;
@@ -121,7 +127,14 @@ Pixel renderPixel(Ray& ray, Scene& scene, int depth = 0)
 		else//if depth == SCN_MAXDEPTH (last bounce)
 		{
 			if (shortestDist < SCN_MAXDIST)
-				return Pixel(0, 0, 0, 1);
+			{
+				int val = shortestDist * 100.0;
+				val = 1.0 - (1.0 / 
+					((val + 1) * (val + 1))
+					);
+				val = clamp(val, 0.0, 1.0);
+				return Pixel(val, val, val, 1);
+			}
 		}
 	}
 	return Pixel(1, 1, 1, 0);
@@ -131,13 +144,17 @@ int main()
 {
 	srand(12345);
 
-	string objfile = "simpleboxes3split";
+	string objfile = "lamp";
 	Scene myScene = readObj("D:/Users/Yegor/Desktop/raytracer/objects/"+objfile+".obj");
 	cout << myScene.numberOfTris() << endl;
 
+	//myScene.mergeMeshes();
+	//myScene.printToConsole();
+	//cout << "Merged" << endl;
 	myScene.buildBboxHierarchy();
-	cout << myScene.numberOfTris() << endl;
-	myScene.printToConsole();
+	myScene.findEmptyChildren();
+	//cout << myScene.numberOfTris() << endl;
+	//myScene.printToConsole();
 
 	Screen myScreen(IMG_W, IMG_H);
 	Ray primaryRay;
@@ -166,9 +183,9 @@ int main()
 	{
 
 		//percentage output
-		if (!(y % 5))
+		if (!(y % 15))
 		{
-			cout << y << endl;
+			cout << (int)((float)y * 100.0 / (float)IMG_H) << endl;
 		}
 
 		//for each pixel

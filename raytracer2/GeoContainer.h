@@ -40,7 +40,7 @@ public:
 	{
 		if (numberOfMeshes() > 0)
 			boundingBox = meshes[0].boundingBox;
-		else
+		else if (numberOfContainers() > 0)
 			boundingBox = containers[0].boundingBox;
 
 		for (int i = 0; i < numberOfMeshes(); i++)
@@ -53,83 +53,107 @@ public:
 		}
 	}
 
-	vector<Mesh>::iterator findBestPartner(GeoContainer& container)
+	void mergeMeshes()
 	{
-		int smallestDist = -1;
-		int dist;
-		vector<Mesh>::iterator bestPartner;
+		Mesh masterMesh;
 		for (vector<Mesh>::iterator m = meshes.begin(); m != meshes.end(); m++)
 		{
-			dist = fabs(container.boundingBox.merged((*m).boundingBox).volume());
-			if (smallestDist < 0 || dist < smallestDist)
-			{
-				smallestDist = dist;
-				bestPartner = m;
-			}
-
+			move((*m).triList.begin(), (*m).triList.end(), back_inserter(masterMesh.triList));
 		}
-		return bestPartner;
+		clear();
+		masterMesh.generateBbox();
+		meshes.push_back(masterMesh);
 	}
 
-	vector<Mesh>::iterator& moveMeshToGroup(vector<Mesh>::iterator& m, GeoContainer& container)
+	void moveMeshToGroup(vector<Mesh>::iterator& m, GeoContainer& container)
 	{
-		container.addMesh(*m);
-		return meshes.erase(m);
+		move(m, m+1, back_inserter(container.meshes));
+		
+		//this automatically increments the mesh pointer to the next mesh
+		m = meshes.erase(m);
 	}
 
 	void buildBboxHierarchy(int depth=0)
 	{
 		calculateBbox();
-		
-		if (numberOfMeshes() > 2)
+
+		if (numberOfMeshes() > 2 && depth < 30)
 		{
 
-			cout << string(depth*2, ' ') << "Sorting Depth " << depth << endl;
+			if (depth < 10)
+				cout << string(depth*2, ' ') << "Sorting Depth " << depth << endl;
 
 			GeoContainer* child1 = new GeoContainer;
 			GeoContainer* child2 = new GeoContainer;
-			vector<Mesh>::iterator n;
 
-			for (vector<Mesh>::iterator m = meshes.begin(); m != meshes.end(); m++)
+			for (vector<Mesh>::iterator m = meshes.begin(); m != meshes.end();)
 			{
 				if (depth % 3 == 0)
 				{
 					if ((*m).boundingBox.center().x < boundingBox.center().x)
-						n = moveMeshToGroup(m, *child1);
+						moveMeshToGroup(m, *child1);
 					else
-						n = moveMeshToGroup(m, *child2);
+						moveMeshToGroup(m, *child2);
 				}
 				else if (depth % 3 == 1)
 				{
 					if ((*m).boundingBox.center().y < boundingBox.center().y)
-						n = moveMeshToGroup(m, *child1);
+						moveMeshToGroup(m, *child1);
 					else
-						n = moveMeshToGroup(m, *child2);
+						moveMeshToGroup(m, *child2);
 				}
 				else if (depth % 3 == 2)
 				{
 					if ((*m).boundingBox.center().z < boundingBox.center().z)
-						n = moveMeshToGroup(m, *child1);
+						moveMeshToGroup(m, *child1);
 					else
-						n = moveMeshToGroup(m, *child2);
+						moveMeshToGroup(m, *child2);
 				}
-				m = n;
 				
 			}
 
 			(*child1).buildBboxHierarchy(depth + 1);
 			(*child2).buildBboxHierarchy(depth + 1);
 
-			containers.push_back(*child1);
-			containers.push_back(*child2);
+			containers.push_back(move(*child1));
+			containers.push_back(move(*child2));
+
+
+			(*child1).parent = this;
+			(*child2).parent = this;
+
 		}//end if num meshes > 2
+
+		/*
+		for (vector<Mesh>::iterator m = meshes.begin(); m != meshes.end(); m++)
+		{
+			(*m).buildBboxHierarchy();
+		}*/
+
+	}
+
+	int findEmptyChildren(int depth = 0)
+	{
+		int amount = 0;
+		amount += numberOfContainers();
+		for (vector<GeoContainer>::iterator c = containers.begin(); c != containers.end(); c++)
+		{
+			amount += (*c).findEmptyChildren(depth + 1);
+		}
+		
+		if (depth == 0 && amount == 0)
+		{
+			cout << "FAIL!!!";
+		}
+
+		return amount;
 	}
 
 	bool intersect(Ray& ray, Tri*& closestTri, double& shortestDist, int depth = 0)
 	{
 		bool contains = boundingBox.contains(ray.p);
 		double intersectDist = 0.0;
-
+		
 		if (!contains)
 		{
 			intersectDist = boundingBox.intersect(ray);

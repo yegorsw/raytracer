@@ -82,6 +82,20 @@ public:
 			);
 	}
 
+	void operator-=(Vec &v)
+	{
+		x -= v.x;
+		y -= v.y;
+		z -= v.z;
+	}
+
+	void operator+=(Vec &v)
+	{
+		x += v.x;
+		y += v.y;
+		z += v.z;
+	}
+
 	Vec operator-()
 	{
 		return Vec(-x, -y, -z);

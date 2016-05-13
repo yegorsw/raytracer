@@ -72,6 +72,7 @@ public:
 		{
 			intersectDist = boundingBox.intersect(ray);
 		}
+
 		if (contains || (intersectDist > 0.0 && intersectDist < shortestDist)){
 			for (int tri = 0; tri < numberOfTris(); tri++)
 			{
@@ -83,57 +84,74 @@ public:
 					closestTri = &(triList[tri]);
 				}
 			}
+
+			for (vector<Mesh>::iterator m = childMeshes.begin(); m != childMeshes.end(); m++)
+			{
+				(*m).intersect(ray, closestTri, shortestDist);
+			}
 		}
 
-		for (vector<Mesh>::iterator m = childMeshes.begin(); m != childMeshes.end(); m++)
-		{
-			(*m).intersect(ray, closestTri, shortestDist);
-		}
-
-		return (intersectDist > 0.0);
+		return (shortestDist > 0.0 && shortestDist < 4999.9999);
 	}
 
-	void moveTriToGroup(vector<Tri>::iterator& m, Mesh& mesh)
+	void moveTriToGroup(vector<Tri>::iterator& t, Mesh& container)
 	{
-		mesh.addTri(*m);
-		triList.erase(m);
+		move(t, t + 1, back_inserter(container.triList));
+
+		//this automatically increments the mesh pointer to the next mesh
+		triList.erase(t);
 	}
 
 	void buildBboxHierarchy(int depth = 0)
 	{
-		Mesh* child1 = new Mesh;
-		Mesh* child2 = new Mesh;
-		for (vector<Tri>::iterator t = triList.begin(); t != triList.end(); t++)
+		generateBbox();
+		if (numberOfTris() > 3 && depth < 30)
 		{
-			if (depth % 3 == 0)
+			if (depth < 4)
+				cout << string(depth * 2, ' ') << "Sorting Mesh Depth " << depth << endl;
+			
+			Vec center;
+			for (int tri = 0; tri < numberOfTris(); tri++)
 			{
-				if ((*t).center().x < boundingBox.center().x)
-					moveTriToGroup(t, *child1);
-				else
-					moveTriToGroup(t, *child2);
+				center = center + triList[tri].center();
+				
 			}
-			else if (depth % 3 == 1)
+			center = center / ((double)numberOfTris());
+
+			Mesh* child1 = new Mesh;
+			Mesh* child2 = new Mesh;
+			for (vector<Tri>::iterator t = triList.begin(); t != triList.end();)
 			{
-				if ((*t).center().y < boundingBox.center().y)
-					moveTriToGroup(t, *child1);
-				else
-					moveTriToGroup(t, *child2);
-			}
-			else if (depth % 3 == 2)
-			{
-				if ((*t).center().z < boundingBox.center().z)
-					moveTriToGroup(t, *child1);
-				else
-					moveTriToGroup(t, *child2);
+				if (depth % 3 == 0)
+				{
+					if ((*t).center().x < center.x)
+						moveTriToGroup(t, *child1);
+					else
+						moveTriToGroup(t, *child2);
+				}
+				else if (depth % 3 == 1)
+				{
+					if ((*t).center().y < center.y)
+						moveTriToGroup(t, *child1);
+					else
+						moveTriToGroup(t, *child2);
+				}
+				else if (depth % 3 == 2)
+				{
+					if ((*t).center().z < center.z)
+						moveTriToGroup(t, *child1);
+					else
+						moveTriToGroup(t, *child2);
+				}
+
 			}
 
+			(*child1).buildBboxHierarchy(depth + 1);
+			(*child2).buildBboxHierarchy(depth + 1);
+
+			childMeshes.push_back(*child1);
+			childMeshes.push_back(*child2);
 		}
-
-		(*child1).buildBboxHierarchy(depth + 1);
-		(*child2).buildBboxHierarchy(depth + 1);
-
-		childMeshes.push_back(*child1);
-		childMeshes.push_back(*child2);
 	}
 
 	void clear()
