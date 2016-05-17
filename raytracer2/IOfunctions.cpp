@@ -39,7 +39,7 @@ vector<string> split(string &inputString, char splitChar){
 
 Scene readObj(string filename){
 	cout << "Reading " << filename << endl;
-	Mesh newMesh;
+	Mesh* newMesh = new Mesh();
 	Scene newScene;
 	ifstream objFile(filename);
 	string line;
@@ -62,11 +62,12 @@ Scene readObj(string filename){
 			{
 				if ((lastLine == "f" || lastLine == "g") && verticies.size() > 0)
 				{
-					newMesh.generateBbox();
+					newMesh->generateBbox();
 
 					newScene.addMesh(newMesh);
 					totalMeshCount++;
-					newMesh.clear();
+					newMesh = new Mesh();
+					//newMesh->clear();
 					//verticies.clear();
 					normals.clear();
 					
@@ -83,14 +84,14 @@ Scene readObj(string filename){
 				i2 = stoi(split(splitLine[3], '/')[0]) - 1;
 				Tri currentTri = { verticies[i0], verticies[i1], verticies[i2] };
 				//currentTri.setNormals(normals[i0], normals[i1], normals[i2]);
-				newMesh.addTri(currentTri);
+				newMesh->addTri(currentTri);
 				totalTriCount++;
 				//currentTri.printToConsole();
 			}
 			lastLine = splitLine[0];
 		}
 	}
-	newMesh.generateBbox();
+	newMesh->generateBbox();
 
 	newScene.addMesh(newMesh);
 	totalMeshCount++;

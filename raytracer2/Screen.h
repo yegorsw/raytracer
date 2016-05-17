@@ -67,6 +67,44 @@ public:
 		}
 	}
 
+	void normalizeValues(bool individual = true)
+	{
+		double maxr = 0.0;
+		double maxg = 0.0;
+		double maxb = 0.0;
+		for (int x = 0; x < xres; x++)
+		{
+			for (int y = 0; y < yres; y++)
+			{
+				maxr = max(maxr, image[x][y].color.r);
+				maxg = max(maxg, image[x][y].color.g);
+				maxb = max(maxb, image[x][y].color.b);
+			}
+		}
+
+		
+		double maxv = max(maxr, max(maxg, maxb));
+		for (int x = 0; x < xres; x++)
+		{
+			for (int y = 0; y < yres; y++)
+			{
+				if (individual)
+				{
+					image[x][y].color.r /= maxr;
+					image[x][y].color.g /= maxg;
+					image[x][y].color.b /= maxb;
+				}
+				else
+				{
+					image[x][y].color.r /= maxv;
+					image[x][y].color.g /= maxv;
+					image[x][y].color.b /= maxv;
+				}
+			}
+		}
+
+	}
+
 	~Screen()
 	{
 	}

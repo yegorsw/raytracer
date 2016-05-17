@@ -2,6 +2,8 @@
 #include "Vec.h"
 #include "Ray.h"
 
+#include "globals.h"
+
 class Tri
 {
 public:
@@ -92,6 +94,8 @@ public:
 		Vec pvec = ray.dir.cross(edge02);
 		double det = edge01.dot(pvec);
 		
+		g_triIntersections++;
+
 		//if ray is parallel with triangle
 		if (det < 0.000001)// && det > -0.000001) uncomment to disable backface culling
 			return 0.0;

@@ -1,6 +1,0 @@
-#pragma once
-//#define DEBUG_OUTPUTALPHA
-//#define DEBUG_OUTPUTDIST
-//#define DEBUG_OUTPUTPOS
-//#define DEBUG_OUTPUTSAMPLES
-//#define DEBUG_OUTPUTBBOX

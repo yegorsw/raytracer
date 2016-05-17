@@ -1,5 +1,6 @@
 #pragma once
 #include "Vec.h"
+#include "globals.h"
 
 class BBox
 {
@@ -43,7 +44,10 @@ public:
 			hitpos = ray.p + (ray.dir * ratio);
 
 			if (hitpos.x >= minCoord.x && hitpos.x <= maxCoord.x && hitpos.y >= minCoord.y && hitpos.y <= maxCoord.y)
+			{
+				g_bboxIntersections++;
 				return ratio;
+			}
 		}
 
 		//y planes
@@ -58,7 +62,10 @@ public:
 			hitpos = ray.p + (ray.dir * ratio);
 
 			if (hitpos.x >= minCoord.x && hitpos.x <= maxCoord.x && hitpos.z >= minCoord.z && hitpos.z <= maxCoord.z)
+			{
+				g_bboxIntersections++;
 				return ratio;
+			}
 		}
 
 		//z planes
@@ -73,7 +80,10 @@ public:
 			hitpos = ray.p + (ray.dir * ratio);
 
 			if (hitpos.y >= minCoord.y && hitpos.y <= maxCoord.y && hitpos.z >= minCoord.z && hitpos.z <= maxCoord.z)
+			{
+				g_bboxIntersections++;
 				return ratio;
+			}
 		}
 		
 		return 0.0;
@@ -93,6 +103,21 @@ public:
 	BBox merged(BBox& box)
 	{
 		return BBox(minCoord.minVec(box.minCoord), maxCoord.maxVec(box.maxCoord));
+	}
+
+	int largestAxis()
+	{
+		int x = maxCoord.x - minCoord.x;
+		int y = maxCoord.y - minCoord.y;
+		int z = maxCoord.z - minCoord.z;
+		if (x > y && x > z)
+			return 0;
+		if (y > x && y > z)
+			return 1;
+		if (z > x && z > y)
+			return 2;
+
+		return 0;
 	}
 
 	void printToConsole()

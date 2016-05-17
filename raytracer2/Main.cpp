@@ -10,17 +10,11 @@
 #include "Scene.h"
 
 #include "IOfunctions.h"
-//#include "renderOverrides.h"
-
-//#define DEBUG_OUTPUTALPHA
-//#define DEBUG_OUTPUTDIST
-//#define DEBUG_OUTPUTPOS
-//#define DEBUG_OUTPUTSAMPLES
-//#define DEBUG_OUTPUTBBOX
+#include "globals.h"
 
 ////SCENE SETUP//// - 25.5 seconds
-const int IMG_W = 300;
-const int IMG_H = 300;
+const int IMG_W = 800;
+const int IMG_H = 800;
 
 const double SCN_MAXDIST = 5000;
 const double SCN_MAXRAYDIST = 5000;
@@ -29,13 +23,13 @@ const int SCN_MAXDEPTH = 1;
 
 const int SHD_MAXSAMPLES = 8;
 
-const int SAMP_MINSAMPLES = 8;
+const int SAMP_MINSAMPLES = 6;
 const int SAMP_MAXSAMPLES = 2048;
-const double SAMP_MINVARIANCE = 0.001;
+const double SAMP_MINVARIANCE = 0.006;
 ////END OF SCENE SETUP////
 
 unsigned int g_triIntersections = 0;
-unsigned int g_boxIntersections = 0;
+unsigned int g_bboxIntersections = 0;
 
 const double invRandMax = (1.0 / (double)RAND_MAX);
 
@@ -76,15 +70,7 @@ Pixel renderPixel(Ray& ray, Scene& scene, int depth = 0)
 
 	intersected = scene.intersect(ray, closestTri, shortestDist);
 
-#ifdef DEBUG_OUTPUTBBOX
-	if (intersected && shortestDist < SCN_MAXDIST)
-		return Pixel(1, 1, 1, 1);
-	else
-		return Pixel(0, 0, 0, 0);
-#endif
-
 #ifdef DEBUG_OUTPUTDIST
-	shortestDist *= 0.01;
 	return Pixel(shortestDist, shortestDist, shortestDist, 1);
 #endif
 
@@ -144,12 +130,12 @@ int main()
 {
 	srand(12345);
 
-	string objfile = "lamp";
+	string objfile = "quadbotsplit2";
 	Scene myScene = readObj("D:/Users/Yegor/Desktop/raytracer/objects/"+objfile+".obj");
 	cout << myScene.numberOfTris() << endl;
 
 	//myScene.mergeMeshes();
-	//myScene.printToConsole();
+	myScene.printToConsole();
 	//cout << "Merged" << endl;
 	myScene.buildBboxHierarchy();
 	myScene.findEmptyChildren();
@@ -216,6 +202,8 @@ int main()
 				else
 					varianceCombo = 0;
 
+
+
 				s++;
 			}//end for each sample
 			
@@ -226,6 +214,13 @@ int main()
 			currentPixel.setAlpha(1);
 #endif
 
+#ifdef DEBUG_OUTPUTINTERSECTIONS
+			currentPixel.setColor(g_triIntersections, g_bboxIntersections, currentPixel.a);
+
+			currentPixel.setAlpha(1);
+			g_triIntersections = 0;
+			g_bboxIntersections = 0;
+#endif
 			myScreen.setPixel(x, y, currentPixel);
 
 			//crtl+d early exit & dump pixels
@@ -251,9 +246,17 @@ int main()
 	double rendertime = double(end - begin) / CLOCKS_PER_SEC;
 	cout << endl << "Render time: " << rendertime<< endl;
 	cout << g_triIntersections << " triangle intersections tested." << endl;
-	cout << g_boxIntersections << " box intersections tested." << endl;
+	cout << g_bboxIntersections << " box intersections tested." << endl;
 	//myScreen.invertRGB();
 	//myScreen.constantAlpha();
+
+#ifdef DEBUG_OUTPUTINTERSECTIONS
+	myScreen.normalizeValues();
+#endif
+#ifdef DEBUG_OUTPUTDIST
+	myScreen.normalizeValues();
+#endif
+
 	writePPM(myScreen, "D:/Users/Yegor/Desktop/raytracer/"+objfile+".ppm", "rgba");
 	//myScene.printToConsole();
 }

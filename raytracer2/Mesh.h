@@ -3,7 +3,7 @@
 #include "Tri.h"
 #include <vector>
 #include "BBox.h"
-#include "renderOverrides.h"
+#include "globals.h"
 
 using namespace std;
 
