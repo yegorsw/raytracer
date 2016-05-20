@@ -13,18 +13,18 @@
 #include "globals.h"
 
 ////SCENE SETUP//// - 25.5 seconds
-const int IMG_W = 800;
-const int IMG_H = 800;
+const int IMG_W = 600;
+const int IMG_H = 600;
 
 const double SCN_MAXDIST = 5000;
 const double SCN_MAXRAYDIST = 5000;
 const double SCN_RAYBIAS = 0.01;
-const int SCN_MAXDEPTH = 1;
+const int SCN_MAXDEPTH = 2;
 
-const int SHD_MAXSAMPLES = 8;
+const int SHD_MAXSAMPLES = 32;
 
-const int SAMP_MINSAMPLES = 6;
-const int SAMP_MAXSAMPLES = 2048;
+const int SAMP_MINSAMPLES = 10;
+const int SAMP_MAXSAMPLES = 150;
 const double SAMP_MINVARIANCE = 0.006;
 ////END OF SCENE SETUP////
 
@@ -87,7 +87,7 @@ Pixel renderPixel(Ray& ray, Scene& scene, int depth = 0)
 #endif
 
 	if (intersected){
-		if (depth < SCN_MAXDEPTH)
+		if (depth < SCN_MAXDEPTH && closestTri->mtl->hasDiffuse())
 		{
 			if (shortestDist < SCN_MAXDIST)
 			{
@@ -95,7 +95,7 @@ Pixel renderPixel(Ray& ray, Scene& scene, int depth = 0)
 				Ray indirectRay;
 				indirectRay.setPos(ray.p + (ray.dir * shortestDist) + ((*closestTri).n * SCN_RAYBIAS));
 
-				for (int i = 0; i < SHD_MAXSAMPLES; i++)
+				for (int i = 0; i < max(SHD_MAXSAMPLES/(depth+1), 1); i++)
 				{
 					indirectRay.setDir(randfneg(), randfneg(), randfneg());
 					indirectRay.dir.normalize();
@@ -103,7 +103,12 @@ Pixel renderPixel(Ray& ray, Scene& scene, int depth = 0)
 					if (indirectRay.dir.dot((*closestTri).n) < 0.0)
 						indirectRay.dir = -indirectRay.dir;
 					
-					outPixel += renderPixel(indirectRay, scene, depth + 1);
+					Pixel nextBounce = renderPixel(indirectRay, scene, depth + 1);
+
+					nextBounce.color *= closestTri->mtl->Kd;
+					nextBounce.color += closestTri->mtl->Ka;
+					
+					outPixel += nextBounce;
 				}
 				outPixel /= SHD_MAXSAMPLES;
 				outPixel.a = 1.0;
@@ -119,18 +124,21 @@ Pixel renderPixel(Ray& ray, Scene& scene, int depth = 0)
 					((val + 1) * (val + 1))
 					);
 				val = clamp(val, 0.0, 1.0);
-				return Pixel(val, val, val, 1);
+
+				return Pixel(closestTri->mtl->Ka, 1);
 			}
 		}
 	}
-	return Pixel(1, 1, 1, 0);
+
+	//no intersection, return black
+	return Pixel(0, 0, 0, 0);
 }
 
 int main()
 {
 	srand(12345);
 
-	string objfile = "quadbotsplit2";
+	string objfile = "lampglow";
 	Scene myScene = readObj("D:/Users/Yegor/Desktop/raytracer/objects/"+objfile+".obj");
 	cout << myScene.numberOfTris() << endl;
 
@@ -140,7 +148,7 @@ int main()
 	myScene.buildBboxHierarchy();
 	myScene.findEmptyChildren();
 	//cout << myScene.numberOfTris() << endl;
-	//myScene.printToConsole();
+	myScene.printToConsole();
 
 	Screen myScreen(IMG_W, IMG_H);
 	Ray primaryRay;
@@ -149,7 +157,7 @@ int main()
 	//double shortestDist = SCN_MAXDIST;
 	//double intersectDist = 0;
 
-	float sx, sy;
+	float sx, sy, rx, ry;
 
 	//bool hit = false;
 	//int cl = 0;
@@ -182,8 +190,13 @@ int main()
 			double s = 1.0;
 			while (varianceCombo < SAMP_MINSAMPLES && s <= SAMP_MAXSAMPLES)
 			{
-				sx = ((x + randfneg()*0.5 - IMG_W * 0.5) / (double)IMG_H) * 2;
-				sy = ((y + randfneg()*0.5 - IMG_H * 0.5) / (double)IMG_H) * -2;
+				rx = randfneg();
+				ry = randfneg();
+//				rx = rx * rx * sign(rx) * 0.5;
+//				rx = ry * ry * sign(ry) * 0.5;
+
+				sx = ((x + rx - IMG_W * 0.5) / (double)IMG_H) * 2;
+				sy = ((y + ry - IMG_H * 0.5) / (double)IMG_H) * -2;
 
 				primaryRay.setDir(sx* 0.6, sy*0.6, -1.0);
 				primaryRay.dir.normalize();
@@ -191,7 +204,10 @@ int main()
 				variance = currentPixel;
 
 				renderedPixel = renderPixel(primaryRay, myScene);
+				renderedPixel.color.clamp();
 				renderedPixel *= 1.0 / s;
+
+				currentPixel.color.clamp();
 				currentPixel *= (s - 1.0) / s;
 				currentPixel += renderedPixel;
 
@@ -257,6 +273,7 @@ int main()
 	myScreen.normalizeValues();
 #endif
 
+//	myScreen.applyGamma(2.2);
 	writePPM(myScreen, "D:/Users/Yegor/Desktop/raytracer/"+objfile+".ppm", "rgba");
 	//myScene.printToConsole();
 }

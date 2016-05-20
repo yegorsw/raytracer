@@ -1,8 +1,10 @@
 #include "IOfunctions.h"
+#include "MtlLib.h"
 
 using namespace std;
 
-double clamp(double n, double minValue, double maxValue){
+double clamp(double n, double minValue, double maxValue)
+{
 	if (n < minValue)
 		return minValue;
 	if (n > maxValue)
@@ -11,33 +13,80 @@ double clamp(double n, double minValue, double maxValue){
 }
 
 //convert int to string and pad (python zfill()) - '4' -> "0004"
-string padInt(int nIn){
+string padInt(int nIn)
+{
 	string n = to_string(nIn);
 	string outString = string(4 - n.length(), ' ') + n;
 	return outString;
 }
 
 //split string into vector of substrings
-vector<string> split(string &inputString, char splitChar){
+vector<string> split(string &inputString, char splitChar)
+{
 	string stringBuffer = "";
 	vector<string> outputString;
-	for (unsigned int i = 0; i < inputString.length(); i++){
-		if (inputString[i] == splitChar){
+	for (unsigned int i = 0; i < inputString.length(); i++)
+	{
+		if (inputString[i] == splitChar)
+		{
 			outputString.push_back(stringBuffer);
 			stringBuffer = "";
 		}
-		else{
+		else
+		{
 			stringBuffer += inputString[i];
 		}
 	}
-	if (stringBuffer.length() > 0){
+	if (stringBuffer.length() > 0)
+	{
 		outputString.push_back(stringBuffer);
 	}
 	return outputString;
 }
 
+void readMtl(string filename, MtlLib* mlib)
+{
+	cout << "Reading " << filename << endl;
 
-Scene readObj(string filename){
+	string line;
+	vector<string> splitLine;
+	ifstream mtlFile(filename);
+	string lastLine = "!temp!";
+	Mtl newMtl;
+
+	while (getline(mtlFile, line))
+	{
+		splitLine = split(line, ' ');
+		if (splitLine.size() > 0)
+		{
+			if (splitLine[0] == "newmtl")
+			{
+				if (newMtl.name != "")
+				{
+					mlib->addMtl(newMtl);
+					Mtl newMtl;
+				}
+				newMtl.name = splitLine[1];
+			}
+			else if (splitLine[0] == "Kd")
+			{
+				newMtl.Kd = Color(stod(splitLine[1]), stod(splitLine[2]), stod(splitLine[3]));
+			}
+			else if (splitLine[0] == "Ka")
+			{
+				newMtl.Ka = Color(stod(splitLine[1]), stod(splitLine[2]), stod(splitLine[3]));
+			}
+		}
+		lastLine = splitLine[0];
+	}
+
+	mlib->addMtl(newMtl);
+
+	cout << "Loaded " << mlib->numberOfMtls() << "materials." << endl;
+}
+
+Scene readObj(string filename)
+{
 	cout << "Reading " << filename << endl;
 	Mesh* newMesh = new Mesh();
 	Scene newScene;
@@ -47,13 +96,18 @@ Scene readObj(string filename){
 	vector<Vec> verticies, normals;
 	string lastLine = "temp";
 
+	Mtl* currentMtl = new Mtl();
+	MtlLib* mlib = new MtlLib();
+
+
 	int totalTriCount = 0;
 	int totalMeshCount = 0;
 	//int mtlId = 0;
 	//string currentMat = "";
 	int i0, i1, i2;
 	int lineId = 1;
-	while (getline(objFile, line)){
+	while (getline(objFile, line))
+	{
 		splitLine = split(line, ' ');
 		lineId++;
 		if (splitLine.size() > 0)
@@ -78,15 +132,28 @@ Scene readObj(string filename){
 			{
 				normals.push_back(Vec(stod(splitLine[1]), stod(splitLine[2]), stod(splitLine[3])));;
 			}
-			else if (splitLine[0] == "f"){
+			else if (splitLine[0] == "f")
+			{
 				i0 = stoi(split(splitLine[1], '/')[0]) - 1;
 				i1 = stoi(split(splitLine[2], '/')[0]) - 1;
 				i2 = stoi(split(splitLine[3], '/')[0]) - 1;
 				Tri currentTri = { verticies[i0], verticies[i1], verticies[i2] };
 				//currentTri.setNormals(normals[i0], normals[i1], normals[i2]);
+				currentTri.mtl = currentMtl;
+
 				newMesh->addTri(currentTri);
 				totalTriCount++;
 				//currentTri.printToConsole();
+			}
+			else if (splitLine[0] == "mtllib")
+			{
+				readMtl("D:/Users/Yegor/Desktop/raytracer/objects/" + splitLine[1], mlib);
+				newScene.mlib = mlib;
+			}
+			else if (splitLine[0] == "usemtl")
+			{
+				currentMtl = newScene.mlib->findMtl(splitLine[1]);
+				cout << currentMtl->name << endl;
 			}
 			lastLine = splitLine[0];
 		}

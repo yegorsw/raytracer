@@ -5,13 +5,23 @@
 
 class Scene: public GeoContainer
 {
+private:
+	vector<Tri*> lightList;
+
 public:
-//	vector<Mesh> meshes;
-//	vector<Mesh> lights;
-//	GeoContainer masterContainer;
-	
+	//	vector<Mesh> meshes;
+	//	vector<Mesh> lights;
+	//	GeoContainer masterContainer;
+	MtlLib* mlib;
+
 	Scene()
 	{
+	}
+
+
+	void buildLightList()
+	{
+
 	}
 	
 	~Scene()

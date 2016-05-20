@@ -9,10 +9,13 @@ class Mtl
 public:
 	Color Kd;
 	Color Ka;
-	string name;
+	string name = "";
 
 	Mtl()
 	{
+		name = "default";
+		Kd = Color{ 0.18, 0.18, 0.18 };
+		Ka = Color{ 0.0, 0.0, 0.0 };
 	}
 
 	Mtl(string nameIn, Color KdIn, Color KaIn)
@@ -20,6 +23,11 @@ public:
 		name = nameIn;
 		Kd = KdIn;
 		Ka = KaIn;
+	}
+
+	bool hasDiffuse()
+	{
+		return Kd.r + Kd.g + Kd.b > 0.000001;
 	}
 
 	~Mtl()

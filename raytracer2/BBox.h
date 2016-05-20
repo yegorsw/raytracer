@@ -110,14 +110,13 @@ public:
 		int x = maxCoord.x - minCoord.x;
 		int y = maxCoord.y - minCoord.y;
 		int z = maxCoord.z - minCoord.z;
-		if (x > y && x > z)
+		int m = max(max(x, y), z);
+		if (m == x)
 			return 0;
-		if (y > x && y > z)
+		if (m == y)
 			return 1;
-		if (z > x && z > y)
+		if (m == z)
 			return 2;
-
-		return 0;
 	}
 
 	void printToConsole()

@@ -66,6 +66,25 @@ public:
 		meshes.push_back(masterMesh);
 	}*/
 
+	Vec center()
+	{
+		Vec mid;
+		for (int i = 0; i < numberOfMeshes(); i++)
+		{
+			meshes[i]->generateBbox();
+			mid = mid + meshes[i]->boundingBox.center();
+		}
+
+		mid = mid / ((double)numberOfMeshes());
+
+		/*for (int i = 0; i < numberOfContainers(); i++)
+		{
+			mid = mid + containers[i].center();
+		}*/
+
+		return mid;
+	}
+
 	void moveMeshToGroup(vector<Mesh*>::iterator& m, GeoContainer& container)
 	{
 		move(m, m+1, back_inserter(container.meshes));
@@ -78,7 +97,7 @@ public:
 	{
 		calculateBbox();
 
-		if (numberOfMeshes() > 2 && depth < 4)
+		if (numberOfMeshes() > 3 && depth < 8)
 		{
 
 			if (depth < 30)
@@ -91,21 +110,21 @@ public:
 			{
 				if (boundingBox.largestAxis() == 0)
 				{
-					if ((**m).boundingBox.center().x < boundingBox.center().x)
+					if ((**m).boundingBox.center().x <= center().x)
 						moveMeshToGroup(m, *child1);
 					else
 						moveMeshToGroup(m, *child2);
 				}
 				else if (boundingBox.largestAxis() == 1)
 				{
-					if ((**m).boundingBox.center().y < boundingBox.center().y)
+					if ((**m).boundingBox.center().y <= center().y)
 						moveMeshToGroup(m, *child1);
 					else
 						moveMeshToGroup(m, *child2);
 				}
 				else if (boundingBox.largestAxis() == 2)
 				{
-					if ((**m).boundingBox.center().z < boundingBox.center().z)
+					if ((**m).boundingBox.center().z <= center().z)
 						moveMeshToGroup(m, *child1);
 					else
 						moveMeshToGroup(m, *child2);

@@ -1,12 +1,20 @@
 #pragma once
 #include "Vec.h"
 #include "Ray.h"
+#include "Mtl.h"
 
 #include "globals.h"
 
 class Tri
 {
+private:
+	Vec edge01;
+	Vec edge02;
+	
+
 public:
+	Mtl* mtl;
+
 	//vertex positions
 	Vec p0;
 	Vec p1;
@@ -19,9 +27,6 @@ public:
 
 	//geometric triangle normal
 	Vec n;
-
-	Vec edge01;
-	Vec edge02;
 
 	Tri()
 	{

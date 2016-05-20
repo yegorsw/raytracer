@@ -67,6 +67,17 @@ public:
 		}
 	}
 
+	void applyGamma(double gamma)
+	{
+		for (int x = 0; x < xres; x++)
+		{
+			for (int y = 0; y < yres; y++)
+			{
+				image[x][y].color.applyGamma(gamma);
+			}
+		}
+	}
+
 	void normalizeValues(bool individual = true)
 	{
 		double maxr = 0.0;

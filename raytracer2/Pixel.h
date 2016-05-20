@@ -24,6 +24,12 @@ public:
 		a = aIn;
 	}
 
+	Pixel(Color cIn, double aIn)
+	{
+		color = cIn;
+		a = aIn;
+	}
+
 	//set values of pixel
 	void setValues(double rIn, double gIn, double bIn, double aIn)
 	{
@@ -84,6 +90,14 @@ public:
 		color.g *= inv;
 		color.b *= inv;
 		a *= inv;
+	}
+
+	bool isBlack()
+	{
+		if (color.r == 0.0 && color.g == 0.0 && color.b == 0.0 && a == 0.0)
+			return true;
+		else
+			return false;
 	}
 
 	double magnitude()
