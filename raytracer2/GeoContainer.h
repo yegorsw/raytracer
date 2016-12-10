@@ -1,101 +1,87 @@
 #pragma once
 
-#include "Mesh.h"
+#include "Tri.h"
+#include "BBox.h"
 #include "globals.h"
 
 class GeoContainer
 {
 public:
 	BBox boundingBox;
-	vector<Mesh*> meshes;
-	vector<GeoContainer> containers;
+	//vector<Mesh*> meshes;
+	vector<Tri*> tris;
+	GeoContainer* child1;
+	GeoContainer* child2;
 	GeoContainer* parent;
-
+	bool hasChildren = false;
 
 	GeoContainer()
 	{
 	}
 
-	void addMesh(Mesh* mesh)
+	void addTri(Tri* t)
 	{
-		meshes.push_back(mesh);
+		tris.push_back(t);
 	}
 
-	int numberOfMeshes()
+	void generateBbox()
 	{
-		return meshes.size();
-	}
+		boundingBox = BBox();
+		float minX = tris[0]->p0.x;
+		float minY = tris[0]->p0.y;
+		float minZ = tris[0]->p0.z;
 
-	int numberOfContainers()
-	{
-		return containers.size();
-	}
+		float maxX = tris[0]->p0.x;
+		float maxY = tris[0]->p0.y;
+		float maxZ = tris[0]->p0.z;
 
-	void clear()
-	{
-		meshes.clear();
-	}
-
-	void calculateBbox()
-	{
-		if (numberOfMeshes() > 0)
-			boundingBox = meshes[0]->boundingBox;
-		else if (numberOfContainers() > 0)
-			boundingBox = containers[0].boundingBox;
-
-		for (int i = 0; i < numberOfMeshes(); i++)
+		for (int i = 0; i < tris.size(); i++)
 		{
-			boundingBox = boundingBox.merged(meshes[i]->boundingBox);
-		}
-		for (int i = 0; i < numberOfContainers(); i++)
-		{
-			boundingBox = boundingBox.merged(containers[i].boundingBox);
-		}
-	}
+			minX = min(minX, tris[i]->minX());
+			minY = min(minY, tris[i]->minY());
+			minZ = min(minZ, tris[i]->minZ());
 
-	/*
-	void mergeMeshes()
-	{
-		Mesh masterMesh;
-		for (vector<Mesh*>::iterator m = meshes.begin(); m != meshes.end(); m++)
-		{
-			move((*m)->triList.begin(), (*m).triList.end(), back_inserter(masterMesh.triList));
+			maxX = max(maxX, tris[i]->maxX());
+			maxY = max(maxY, tris[i]->maxY());
+			maxZ = max(maxZ, tris[i]->maxZ());
 		}
-		clear();
-		masterMesh.generateBbox();
-		meshes.push_back(masterMesh);
-	}*/
+
+		boundingBox = {
+			Vec(minX, minY, minZ),
+			Vec(maxX, maxY, maxZ)
+		};
+		if (child1)
+			boundingBox = boundingBox.merged(child1->boundingBox);
+
+		if (child2)
+			boundingBox = boundingBox.merged(child2->boundingBox);
+	}
 
 	Vec center()
 	{
 		Vec mid;
-		for (int i = 0; i < numberOfMeshes(); i++)
-		{
-			meshes[i]->generateBbox();
-			mid = mid + meshes[i]->boundingBox.center();
-		}
-
-		mid = mid / ((double)numberOfMeshes());
-
-		/*for (int i = 0; i < numberOfContainers(); i++)
-		{
-			mid = mid + containers[i].center();
-		}*/
+		mid += child1->boundingBox.center();
+		mid += child2->boundingBox.center();
+		mid = mid / 2.0;
 
 		return mid;
 	}
 
-	void moveMeshToGroup(vector<Mesh*>::iterator& m, GeoContainer& container)
+	void buildBboxHierarchy(int depth = 0)
 	{
-		move(m, m+1, back_inserter(container.meshes));
-		
-		//this automatically increments the mesh pointer to the next mesh
-		m = meshes.erase(m);
+
 	}
 
-	void buildBboxHierarchy(int depth=0)
+	/*
+	buildbboxhierarchy:
+		bestcost = 9999
+		for i = stepsize; i < 1.0 - stepsize; i++
+			getCost(
+	*/
+	
+	/*void buildBboxHierarchy(int depth=0)
 	{
-		calculateBbox();
+		generateBbox();
 
 		if (numberOfMeshes() > 3 && depth < 8)
 		{
@@ -144,110 +130,99 @@ public:
 
 		}//end if num meshes > 2
 
-		/*
+		
 		for (vector<Mesh>::iterator m = meshes.begin(); m != meshes.end(); m++)
 		{
 			(*m).buildBboxHierarchy();
-		}*/
-
-	}
-
-	void findEmptyChildren()
-	{
-		for (vector<GeoContainer>::iterator c = containers.begin(); c != containers.end(); c++)
-		{
-			c->findEmptyChildren();
 		}
-		if (numberOfContainers() + numberOfMeshes() < 2)
-			cout << "DAMN!!!!\n";
-	}
+
+	}*/
 
 	bool intersect(Ray& ray, Tri*& closestTri, double& shortestDist, int depth = 0)
 	{
-		bool contains = boundingBox.contains(ray.p);
-		double intersectDist = 0.0;
-
-		if (!contains)
+		//intersect all tris first
+		double dist;
+		for (vector<Tri*>::iterator t = tris.begin(); t != tris.end(); t++)
 		{
-			intersectDist = boundingBox.intersect(ray);
+			if ((**t).intersect(ray, dist))
+			{
+				if (dist < shortestDist)
+				{
+					closestTri = *t;
+					shortestDist = dist;
+				}
+			}
 		}
 
-		if (contains || (intersectDist > 0.0 && intersectDist < shortestDist))
+		//if has children, intersect them
+		if (hasChildren)
 		{
-			for (int i = 0; i < numberOfMeshes(); i++)
+			double dist1, dist2;
+			bool hit1 = child1->boundingBox.intersect(ray, dist1);
+			bool hit2 = child2->boundingBox.intersect(ray, dist2);
+			
+			//if ray passes through both bounding boxes
+			if (hit1 && hit2)
 			{
-				meshes[i]->intersect(ray, closestTri, shortestDist);
-			}
+				//intersect closer child first
+				if (dist1 < dist2)
+				{
+					if (dist1 < shortestDist)
+						child1->intersect(ray, closestTri, shortestDist, depth + 1);
 
-			for (int i = 0; i < numberOfContainers(); i++)
+					if (dist2 < shortestDist)
+						child2->intersect(ray, closestTri, shortestDist, depth + 1);
+				}
+				else
+				{
+					if (dist2 < shortestDist)
+						child2->intersect(ray, closestTri, shortestDist, depth + 1);
+
+					if (dist1 < shortestDist)
+						child1->intersect(ray, closestTri, shortestDist, depth + 1);
+				}
+
+			}
+			//if ray only passes through child1
+			else if (hit1 && !hit2)
 			{
-				containers[i].intersect(ray, closestTri, shortestDist);
+				if (dist1 < shortestDist)
+					child1->intersect(ray, closestTri, shortestDist, depth + 1);
 			}
-
+			//if ray only passes through child2
+			else if (hit2 && !hit1)
+			{
+				if (dist2 < shortestDist)
+					child1->intersect(ray, closestTri, shortestDist, depth + 1);
+			}
+			
 		}
 
-
-	return (shortestDist > 0.0 && shortestDist < 4999.9999);
+		return (shortestDist > 0.0 && shortestDist < 4999);
 	}
-
-	/*bool intersect(Ray& ray, Tri*& closestTri, double& shortestDist, int depth = 0)
-	{
-		bool contains = boundingBox.contains(ray.p);
-		double intersectDist = 0.0;
-		
-		if (!contains)
-		{
-			intersectDist = boundingBox.intersect(ray);
-		}
-
-		if (contains || (intersectDist > 0.0 && intersectDist < shortestDist))
-		{
-			for (int i = 0; i < numberOfMeshes(); i++)
-			{
-				meshes[i]->intersect(ray, closestTri, shortestDist);
-			}
-
-			for (int i = 0; i < numberOfContainers(); i++)
-			{
-				containers[i].intersect(ray, closestTri, shortestDist);
-			}
-
-		}
-		
-		
-		return (shortestDist > 0.0 && shortestDist < 4999.9999);
-	}*/
 
 	int numberOfTris()
 	{
-		int tris = 0;
-		for (int i = 0; i < numberOfMeshes(); i++)
-		{
-			tris += meshes[i]->numberOfTris();
-		}
-		for (int i = 0; i < numberOfContainers(); i++)
-		{
-			tris += containers[i].numberOfTris();
-		}
+		int numTris = tris.size();
+//		numTris += child1->numberOfTris();
+//		numTris += child2->numberOfTris();
 
-		return tris;
+		return numTris;
 	}
 
 	void printToConsole(int depth = 0)
 	{
-		cout << endl << string(depth * 3, ' ') << "Number of meshes: " << numberOfMeshes() << endl;
 		cout << endl << string(depth * 3, ' ');
 		boundingBox.minCoord.printToConsole();
 		cout << endl << string(depth * 3, ' ');
 		boundingBox.maxCoord.printToConsole();
 
 		cout << endl;
-		for (int i = 0; i < numberOfContainers(); i++)
-		{
-			containers[i].printToConsole(depth + 1);
-		}
 
-		if (depth == 0)
+		child1->printToConsole(depth + 1);
+		child2->printToConsole(depth + 1);
+
+		//if (depth == 0)
 			cout << numberOfTris() << " total tris" << endl;
 
 	}
@@ -258,43 +233,3 @@ public:
 	{
 	}
 };
-
-/*
-vector<Mesh>::iterator findBestPartner(GeoContainer& container)
-{
-int smallestDist = -1;
-int dist;
-vector<Mesh>::iterator bestPartner;
-for (vector<Mesh>::iterator m = meshes.begin(); m != meshes.end(); m++)
-{
-dist = (container.boundingBox.center() - (*m).boundingBox.center()).length();
-if (smallestDist < 0 || dist < smallestDist)
-{
-smallestDist = dist;
-bestPartner = m;
-}
-
-}
-return bestPartner;
-}
-*/
-
-/*
-vector<Mesh>::iterator findBestPartner(GeoContainer& container)
-{
-int smallestDist = -1;
-int dist;
-vector<Mesh>::iterator bestPartner;
-for (vector<Mesh>::iterator m = meshes.begin(); m != meshes.end(); m++)
-{
-dist = fabs(container.boundingBox.merged((*m).boundingBox).volume());
-if (smallestDist < 0 || dist < smallestDist)
-{
-smallestDist = dist;
-bestPartner = m;
-}
-
-}
-return bestPartner;
-}
-*/

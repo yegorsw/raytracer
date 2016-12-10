@@ -26,8 +26,14 @@ public:
 			vec.z >= minCoord.z && vec.z <= maxCoord.z;
 	}
 
-	double intersect(Ray& ray)
+	bool intersect(Ray& ray, double& dist)
 	{
+		if (contains(ray.p))
+		{
+			dist = 0.0;
+			return true;
+		}
+
 		Vec hitpos;		
 		double planePos = 0;
 		double ratio;
@@ -46,7 +52,8 @@ public:
 			if (hitpos.x >= minCoord.x && hitpos.x <= maxCoord.x && hitpos.y >= minCoord.y && hitpos.y <= maxCoord.y)
 			{
 				g_bboxIntersections++;
-				return ratio;
+				dist = ratio;
+				return true;
 			}
 		}
 
@@ -64,11 +71,12 @@ public:
 			if (hitpos.x >= minCoord.x && hitpos.x <= maxCoord.x && hitpos.z >= minCoord.z && hitpos.z <= maxCoord.z)
 			{
 				g_bboxIntersections++;
-				return ratio;
+				dist = ratio;
+				return true;
 			}
 		}
 
-		//z planes
+		//x planes
 		if (ray.dir.x != 0)
 		{
 			if (ray.dir.x > 0)
@@ -82,11 +90,12 @@ public:
 			if (hitpos.y >= minCoord.y && hitpos.y <= maxCoord.y && hitpos.z >= minCoord.z && hitpos.z <= maxCoord.z)
 			{
 				g_bboxIntersections++;
-				return ratio;
+				dist = ratio;
+				return true;
 			}
 		}
 		
-		return 0.0;
+		return false;
 
 	}
 

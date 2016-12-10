@@ -1,5 +1,6 @@
 #include "IOfunctions.h"
 #include "MtlLib.h"
+#include "GeoContainer.h"
 
 using namespace std;
 
@@ -85,10 +86,10 @@ void readMtl(string filename, MtlLib* mlib)
 	cout << "Loaded " << mlib->numberOfMtls() << "materials." << endl;
 }
 
+
 Scene readObj(string filename)
 {
 	cout << "Reading " << filename << endl;
-	Mesh* newMesh = new Mesh();
 	Scene newScene;
 	ifstream objFile(filename);
 	string line;
@@ -97,6 +98,7 @@ Scene readObj(string filename)
 	string lastLine = "temp";
 
 	Mtl* currentMtl = new Mtl();
+	Tri* currentTri;
 	MtlLib* mlib = new MtlLib();
 
 
@@ -114,18 +116,11 @@ Scene readObj(string filename)
 		{
 			if (splitLine[0] == "v")
 			{
-				if ((lastLine == "f" || lastLine == "g") && verticies.size() > 0)
+				/*if (lastLine != "v" && verticies.size() > 0)
 				{
-					newMesh->generateBbox();
-
-					newScene.addMesh(newMesh);
-					totalMeshCount++;
-					newMesh = new Mesh();
-					//newMesh->clear();
-					//verticies.clear();
+					verticies.clear();
 					normals.clear();
-					
-				}
+				}*/
 				verticies.push_back(Vec(stod(splitLine[1]), stod(splitLine[2]), stod(splitLine[3])));
 			}
 			else if (splitLine[0] == "vn")
@@ -137,11 +132,12 @@ Scene readObj(string filename)
 				i0 = stoi(split(splitLine[1], '/')[0]) - 1;
 				i1 = stoi(split(splitLine[2], '/')[0]) - 1;
 				i2 = stoi(split(splitLine[3], '/')[0]) - 1;
-				Tri currentTri = { verticies[i0], verticies[i1], verticies[i2] };
+				currentTri = new Tri;
+				currentTri->setPoints(verticies[i0], verticies[i1], verticies[i2]);
 				//currentTri.setNormals(normals[i0], normals[i1], normals[i2]);
-				currentTri.mtl = currentMtl;
-
-				newMesh->addTri(currentTri);
+				currentTri->mtl = currentMtl;
+				currentTri->precompute();
+				newScene.addTri(currentTri);
 				totalTriCount++;
 				//currentTri.printToConsole();
 			}
@@ -158,11 +154,10 @@ Scene readObj(string filename)
 			lastLine = splitLine[0];
 		}
 	}
-	newMesh->generateBbox();
-
-	newScene.addMesh(newMesh);
 	totalMeshCount++;
 	objFile.close();
+
+	newScene.generateBbox();
 
 	cout << "Loaded " << totalTriCount << "tris among " << totalMeshCount << "meshes." << endl;
 

@@ -13,19 +13,19 @@
 #include "globals.h"
 
 ////SCENE SETUP//// - 25.5 seconds
-const int IMG_W = 600;
-const int IMG_H = 600;
+const int IMG_W = 300;
+const int IMG_H = 300;
 
 const double SCN_MAXDIST = 5000;
 const double SCN_MAXRAYDIST = 5000;
 const double SCN_RAYBIAS = 0.01;
-const int SCN_MAXDEPTH = 2;
+const int SCN_MAXDEPTH = 1;
 
-const int SHD_MAXSAMPLES = 32;
+const int SHD_MAXSAMPLES = 4;
 
 const int SAMP_MINSAMPLES = 10;
-const int SAMP_MAXSAMPLES = 150;
-const double SAMP_MINVARIANCE = 0.006;
+const int SAMP_MAXSAMPLES = 4000;
+const double SAMP_MINVARIANCE = 0.001;
 ////END OF SCENE SETUP////
 
 unsigned int g_triIntersections = 0;
@@ -138,17 +138,12 @@ int main()
 {
 	srand(12345);
 
-	string objfile = "lampglow";
+	string objfile = "simpleboxesshaded";
 	Scene myScene = readObj("D:/Users/Yegor/Desktop/raytracer/objects/"+objfile+".obj");
 	cout << myScene.numberOfTris() << endl;
 
-	//myScene.mergeMeshes();
-	myScene.printToConsole();
-	//cout << "Merged" << endl;
-	myScene.buildBboxHierarchy();
-	myScene.findEmptyChildren();
-	//cout << myScene.numberOfTris() << endl;
-	myScene.printToConsole();
+//	myScene.buildBboxHierarchy();
+//	myScene.findEmptyChildren();
 
 	Screen myScreen(IMG_W, IMG_H);
 	Ray primaryRay;
@@ -273,7 +268,7 @@ int main()
 	myScreen.normalizeValues();
 #endif
 
-//	myScreen.applyGamma(2.2);
+	//myScreen.applyGamma(2.2);
 	writePPM(myScreen, "D:/Users/Yegor/Desktop/raytracer/"+objfile+".ppm", "rgba");
 	//myScene.printToConsole();
 }

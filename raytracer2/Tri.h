@@ -37,12 +37,22 @@ public:
 		p0 = p0in;
 		p1 = p1in;
 		p2 = p2in;
+	}
 
+	void precompute()
+	{
 		edge01 = p1 - p0;
 		edge02 = p2 - p0;
 
 		n = edge01.cross(edge02);
 		n.normalize();
+	}
+
+	void setPoints(Vec p0In, Vec p1In, Vec p2In)
+	{
+		p0 = p0In;
+		p1 = p1In;
+		p2 = p2In;
 	}
 
 	void setNormals(Vec n0In, Vec n1In, Vec n2In)
@@ -94,7 +104,7 @@ public:
 		return (p0 + p1 + p2) * 0.33333333333333333333333333;
 	}
 
-	double intersect(Ray& ray)
+	bool intersect(Ray& ray, double& dist)
 	{
 		Vec pvec = ray.dir.cross(edge02);
 		double det = edge01.dot(pvec);
@@ -102,8 +112,8 @@ public:
 		g_triIntersections++;
 
 		//if ray is parallel with triangle
-		if (det < 0.000001)// && det > -0.000001) uncomment to disable backface culling
-			return 0.0;
+		if (det < 0.000001)// && det > -0.000001)// uncomment to disable backface culling
+			return false;
 		
 		double invDet = 1.0 / det;
 
@@ -115,7 +125,7 @@ public:
 
 		//if hit point is NOT on inner side of edge 0-2 OR if it is past vertex b1
 		if (b1 < 0 || b1 > 1)
-			return 0.0;
+			return false;
 
 		//perpendicular to p0-rayOrigin & p0-p1 vectors
 		Vec qvec = tvec.cross(edge01);
@@ -124,11 +134,11 @@ public:
 		double b2 = ray.dir.dot(qvec) * invDet;
 
 		if (b2 < 0 || b1 + b2 > 1)
-			return 0.0;
+			return false;
 
-		double t = edge02.dot(qvec) * invDet;
+	    dist = edge02.dot(qvec) * invDet;
 
-		return t;
+		return true;
 	}
 
 	void printToConsole(){
