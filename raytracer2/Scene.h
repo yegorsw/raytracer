@@ -11,8 +11,9 @@ private:
 public:
 	//	vector<Mesh> meshes;
 	//	vector<Mesh> lights;
-	//	GeoContainer masterContainer;
+	//	GeoContainer masterContainer; test
 	MtlLib* mlib;
+	Mtl skyColor;
 
 	Scene()
 	{

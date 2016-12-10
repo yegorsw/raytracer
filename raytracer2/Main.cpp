@@ -24,7 +24,7 @@ const int SCN_MAXDEPTH = 1;
 const int SHD_MAXSAMPLES = 4;
 
 const int SAMP_MINSAMPLES = 10;
-const int SAMP_MAXSAMPLES = 4000;
+const int SAMP_MAXSAMPLES = 100;
 const double SAMP_MINVARIANCE = 0.001;
 ////END OF SCENE SETUP////
 
@@ -35,7 +35,7 @@ const double invRandMax = (1.0 / (double)RAND_MAX);
 
 using namespace std;
 
-int sign(float n)
+int sign(double n)
 {
 	return n >= 0 ? 1 : -1;
 }
@@ -93,7 +93,7 @@ Pixel renderPixel(Ray& ray, Scene& scene, int depth = 0)
 			{
 				Pixel outPixel;
 				Ray indirectRay;
-				indirectRay.setPos(ray.p + (ray.dir * shortestDist) + ((*closestTri).n * SCN_RAYBIAS));
+				indirectRay.setPos(ray.p + (ray.dir * shortestDist) + (closestTri->n * SCN_RAYBIAS));
 
 				for (int i = 0; i < max(SHD_MAXSAMPLES/(depth+1), 1); i++)
 				{
@@ -108,7 +108,7 @@ Pixel renderPixel(Ray& ray, Scene& scene, int depth = 0)
 					nextBounce.color *= closestTri->mtl->Kd;
 					nextBounce.color += closestTri->mtl->Ka;
 					
-					outPixel += nextBounce;
+					outPixel.color += nextBounce.color;
 				}
 				outPixel /= SHD_MAXSAMPLES;
 				outPixel.a = 1.0;
@@ -119,19 +119,13 @@ Pixel renderPixel(Ray& ray, Scene& scene, int depth = 0)
 		{
 			if (shortestDist < SCN_MAXDIST)
 			{
-				int val = shortestDist * 100.0;
-				val = 1.0 - (1.0 / 
-					((val + 1) * (val + 1))
-					);
-				val = clamp(val, 0.0, 1.0);
-
 				return Pixel(closestTri->mtl->Ka, 1);
 			}
 		}
 	}
 
-	//no intersection, return black
-	return Pixel(0, 0, 0, 0);
+	//no intersection, return sky color
+	return Pixel(scene.skyColor.Ka, 0);
 }
 
 int main()
@@ -139,8 +133,11 @@ int main()
 	srand(12345);
 
 	string objfile = "simpleboxesshaded";
-	Scene myScene = readObj("D:/Users/Yegor/Desktop/raytracer/objects/"+objfile+".obj");
-	cout << myScene.numberOfTris() << endl;
+	string rootdir = "C:/Users/Yegor-s/Desktop/raytracer/";
+	Scene myScene = readObj(rootdir + "objects/" + objfile + ".obj");
+	myScene.skyColor.Ka = { 0.2, 0.7, 1.0 };
+	cout << myScene.numberOfTris() << " triangles in scene" << endl;
+	myScene.mlib->printToConsole();
 
 //	myScene.buildBboxHierarchy();
 //	myScene.findEmptyChildren();
@@ -149,14 +146,9 @@ int main()
 	Ray primaryRay;
 	Vec dir;
 	primaryRay.setPos(0, 0, 0);
-	//double shortestDist = SCN_MAXDIST;
-	//double intersectDist = 0;
 
-	float sx, sy, rx, ry;
-
-	//bool hit = false;
-	//int cl = 0;
-	//double curvature = 0;
+	double sx, sy, rx, ry;
+	
 	cout << endl << "Rendering.. " << endl;
 
 	Pixel currentPixel;
@@ -166,15 +158,17 @@ int main()
 	int varianceCombo = 0;
 
 	clock_t begin = clock();
+	clock_t percent = clock();
 
 	//for each row
 	for (int y = 0; y < IMG_H; y++ )
 	{
 
 		//percentage output
-		if (!(y % 15))
+		if (clock() - percent > 1000)
 		{
-			cout << (int)((float)y * 100.0 / (float)IMG_H) << endl;
+			percent = clock();
+			cout << (int)((double)y * 100.0 / (double)IMG_H) << '%' << endl;
 		}
 
 		//for each pixel
@@ -246,12 +240,6 @@ int main()
 	
 	//crtl+d early exit & dump pixels goto point
 	end_dump:
-
-	/*
-	Ray testRay;
-	testRay.setPos(Vec(0, -0.1, -15.5));
-	testRay.setDir(0, 1, 0);
-	*/
 	
 	clock_t end = clock();
 	double rendertime = double(end - begin) / CLOCKS_PER_SEC;
@@ -268,8 +256,8 @@ int main()
 	myScreen.normalizeValues();
 #endif
 
-	//myScreen.applyGamma(2.2);
-	writePPM(myScreen, "D:/Users/Yegor/Desktop/raytracer/"+objfile+".ppm", "rgba");
+	myScreen.applyGamma(2.2);
+	writePPM(myScreen, rootdir + objfile + ".ppm", "rgba");
 	//myScene.printToConsole();
 }
 
@@ -307,3 +295,5 @@ x = *myPointer;
 same as x = y;
 
 */
+//test1
+//asdfasdhhghgh 

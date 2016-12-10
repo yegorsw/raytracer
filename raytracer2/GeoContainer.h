@@ -24,16 +24,19 @@ public:
 		tris.push_back(t);
 	}
 
-	void generateBbox()
+	void generateBbox(bool shrinkWrap = false)
 	{
-		boundingBox = BBox();
-		float minX = tris[0]->p0.x;
-		float minY = tris[0]->p0.y;
-		float minZ = tris[0]->p0.z;
+		if (!shrinkWrap)
+		{
+		}
 
-		float maxX = tris[0]->p0.x;
-		float maxY = tris[0]->p0.y;
-		float maxZ = tris[0]->p0.z;
+		double minX = tris[0]->p0.x;
+		double minY = tris[0]->p0.y;
+		double minZ = tris[0]->p0.z;
+
+		double maxX = tris[0]->p0.x;
+		double maxY = tris[0]->p0.y;
+		double maxZ = tris[0]->p0.z;
 
 		for (int i = 0; i < tris.size(); i++)
 		{
@@ -46,10 +49,24 @@ public:
 			maxZ = max(maxZ, tris[i]->maxZ());
 		}
 
-		boundingBox = {
-			Vec(minX, minY, minZ),
-			Vec(maxX, maxY, maxZ)
-		};
+		if (shrinkWrap)
+		{
+			minX = max(minX, boundingBox.minCoord.x);
+			minY = max(minY, boundingBox.minCoord.y);
+			minZ = max(minZ, boundingBox.minCoord.z);
+
+			maxX = min(maxX, boundingBox.maxCoord.x);
+			maxY = min(maxY, boundingBox.maxCoord.y);
+			maxZ = min(maxZ, boundingBox.maxCoord.z);
+
+			boundingBox.minCoord = Vec(minX, minY, minZ);
+			boundingBox.maxCoord = Vec(maxX, maxY, maxZ);
+		}
+		else {
+			boundingBox = BBox(Vec(minX, minY, minZ), Vec(maxX, maxY, maxZ));
+		}
+
+
 		if (child1)
 			boundingBox = boundingBox.merged(child1->boundingBox);
 
@@ -67,15 +84,33 @@ public:
 		return mid;
 	}
 
+	double calculateSplitCost(double splitPos, char splitAxis)
+	{
+		return 0;
+	}
+
+	void split(double splitPos, char splitAxis)
+	{
+		child1 = new GeoContainer();
+		child2 = new GeoContainer();
+		if (splitAxis == 'x')
+		{
+			double splitPosWorldSpace = (boundingBox.minCoord * (1.0 - splitPos) + boundingBox.maxCoord * (splitPos)).x;
+
+		}
+	}
+
 	void buildBboxHierarchy(int depth = 0)
 	{
 
 	}
 
 	/*
-	buildbboxhierarchy:
+	buildbboxhierarchy:...
 		bestcost = 9999
-		for i = stepsize; i < 1.0 - stepsize; i++
+		stepsize = 0.1
+		
+		for i = stepsize; i < 1; i++
 			getCost(
 	*/
 	

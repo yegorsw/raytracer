@@ -69,32 +69,32 @@ public:
 		n2 = n;
 	}
 
-	float minX()
+	double minX()
 	{
 		return min(min(p0.x, p1.x), p2.x);
 	}
 
-	float minY()
+	double minY()
 	{
 		return min(min(p0.y, p1.y), p2.y);
 	}
 
-	float minZ()
+	double minZ()
 	{
 		return min(min(p0.z, p1.z), p2.z);
 	}
 
-	float maxX()
+	double maxX()
 	{
 		return max(max(p0.x, p1.x), p2.x);
 	}
 
-	float maxY()
+	double maxY()
 	{
 		return max(max(p0.y, p1.y), p2.y);
 	}
 
-	float maxZ()
+	double maxZ()
 	{
 		return max(max(p0.z, p1.z), p2.z);
 	}

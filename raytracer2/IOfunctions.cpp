@@ -45,9 +45,9 @@ vector<string> split(string &inputString, char splitChar)
 	return outputString;
 }
 
-void readMtl(string filename, MtlLib* mlib)
+void loadMtls(string filename, MtlLib* mlib)
 {
-	cout << "Reading " << filename << endl;
+	cout << "Loading materials from " << filename << endl;
 
 	string line;
 	vector<string> splitLine;
@@ -58,6 +58,7 @@ void readMtl(string filename, MtlLib* mlib)
 	while (getline(mtlFile, line))
 	{
 		splitLine = split(line, ' ');
+		cout << splitLine[1] << endl;
 		if (splitLine.size() > 0)
 		{
 			if (splitLine[0] == "newmtl")
@@ -82,8 +83,9 @@ void readMtl(string filename, MtlLib* mlib)
 	}
 
 	mlib->addMtl(newMtl);
+	cout << "Loaded material: " << newMtl.name << endl;
 
-	cout << "Loaded " << mlib->numberOfMtls() << "materials." << endl;
+	cout << "Loaded " << mlib->numberOfMtls() << " materials." << endl;
 }
 
 
@@ -143,13 +145,13 @@ Scene readObj(string filename)
 			}
 			else if (splitLine[0] == "mtllib")
 			{
-				readMtl("D:/Users/Yegor/Desktop/raytracer/objects/" + splitLine[1], mlib);
+				loadMtls(filename.substr(0, filename.size() - 3) + "mtl", mlib);
 				newScene.mlib = mlib;
 			}
 			else if (splitLine[0] == "usemtl")
 			{
 				currentMtl = newScene.mlib->findMtl(splitLine[1]);
-				cout << currentMtl->name << endl;
+				cout << "Assigning material: " << currentMtl->name << endl;
 			}
 			lastLine = splitLine[0];
 		}
@@ -159,7 +161,7 @@ Scene readObj(string filename)
 
 	newScene.generateBbox();
 
-	cout << "Loaded " << totalTriCount << "tris among " << totalMeshCount << "meshes." << endl;
+	cout << "Loaded " << totalTriCount << " triangles among " << totalMeshCount << " meshes." << endl;
 
 	return newScene;
 }
@@ -181,9 +183,9 @@ void writePPM(Screen &screenIn, string filename, string mode){
 			for (int x = 0; x < screenIn.xres; x++){
 				currentPixel = screenIn.getPixel(x, y);
 				double a = currentPixel.a;
-				string r = padInt((int)(clamp(currentPixel.color.r * a, 0, 1) * 255));
-				string g = padInt((int)(clamp(currentPixel.color.g * a, 0, 1) * 255));
-				string b = padInt((int)(clamp(currentPixel.color.b * a, 0, 1) * 255));
+				string r = padInt((int)(clamp(currentPixel.color.r, 0, 1) * 255));
+				string g = padInt((int)(clamp(currentPixel.color.g, 0, 1) * 255));
+				string b = padInt((int)(clamp(currentPixel.color.b, 0, 1) * 255));
 				outputFile << r << g << b;
 			}
 			outputFile << '\n';

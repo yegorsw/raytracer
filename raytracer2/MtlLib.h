@@ -13,7 +13,7 @@ public:
 		Mtl defaultMtl(
 			"default", 
 			Color{ 0.18, 0.18, 0.18 }, 
-			Color{ 1.0, 0.0, 1.0 }
+			Color{ 0.0, 0.0, 0.0 }
 		);
 		mtlList.push_back(defaultMtl);
 	}
@@ -44,6 +44,15 @@ public:
 		}
 
 		return &mtlList[0];
+	}
+
+	void printToConsole()
+	{
+		cout << "Material Library:" << endl;
+		for (vector<Mtl>::iterator i = mtlList.begin(); i < mtlList.end(); i++)
+		{
+			cout << i->name << endl;
+		}
 	}
 
 	~MtlLib()

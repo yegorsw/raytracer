@@ -38,13 +38,13 @@ public:
 	void generateBbox()
 	{
 		boundingBox = BBox();
-		float minX = triList[0].p0.x;
-		float minY = triList[0].p0.y;
-		float minZ = triList[0].p0.z;
+		double minX = triList[0].p0.x;
+		double minY = triList[0].p0.y;
+		double minZ = triList[0].p0.z;
 
-		float maxX = triList[0].p0.x;
-		float maxY = triList[0].p0.y;
-		float maxZ = triList[0].p0.z;
+		double maxX = triList[0].p0.x;
+		double maxY = triList[0].p0.y;
+		double maxZ = triList[0].p0.z;
 
 		for (int i = 0; i < triList.size(); i++)
 		{
