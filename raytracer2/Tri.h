@@ -71,32 +71,32 @@ public:
 
 	double minX()
 	{
-		return min(min(p0.x, p1.x), p2.x);
+		return min(min(p0.p[0], p1.p[0]), p2.p[0]);
 	}
 
 	double minY()
 	{
-		return min(min(p0.y, p1.y), p2.y);
+		return min(min(p0.p[1], p1.p[1]), p2.p[1]);
 	}
 
 	double minZ()
 	{
-		return min(min(p0.z, p1.z), p2.z);
+		return min(min(p0.p[2], p1.p[2]), p2.p[2]);
 	}
 
 	double maxX()
 	{
-		return max(max(p0.x, p1.x), p2.x);
+		return max(max(p0.p[0], p1.p[0]), p2.p[0]);
 	}
 
 	double maxY()
 	{
-		return max(max(p0.y, p1.y), p2.y);
+		return max(max(p0.p[1], p1.p[1]), p2.p[1]);
 	}
 
 	double maxZ()
 	{
-		return max(max(p0.z, p1.z), p2.z);
+		return max(max(p0.p[2], p1.p[2]), p2.p[2]);
 	}
 
 	Vec center()
@@ -112,13 +112,13 @@ public:
 		g_triIntersections++;
 
 		//if ray is parallel with triangle
-		if (det < 0.000001)// && det > -0.000001)// uncomment to disable backface culling
+		if (det < 0.000001 && det > -0.000001)// uncomment to disable backface culling
 			return false;
 		
 		double invDet = 1.0 / det;
 
 		//line from triangle origin (p0) to ray origin
-		Vec tvec = ray.p - p0;
+		Vec tvec = ray.pos - p0;
 
 		//barycentric coord relative to p1
 		double b1 = tvec.dot(pvec) * invDet;

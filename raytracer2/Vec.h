@@ -7,9 +7,7 @@ using namespace std;
 class Vec
 {
 public:
-	double x = 0;
-	double y = 0;
-	double z = 0;
+	double p[3] = { 0.0, 0.0, 0.0 };
 
 	//default constructor
 	Vec()
@@ -18,95 +16,95 @@ public:
 
 	Vec(double xIn, double yIn, double zIn)
 	{
-		x = xIn;
-		y = yIn;
-		z = zIn;
+		p[0] = xIn;
+		p[1] = yIn;
+		p[2] = zIn;
 	}
 
 	void setValues(double xIn, double yIn, double zIn)
 	{
-		x = xIn;
-		y = yIn;
-		z = zIn;
+		p[0] = xIn;
+		p[1] = yIn;
+		p[2] = zIn;
 	}
 
 	double length()
 	{
-		return sqrt(x*x + y*y + z*z);
+		return sqrt(p[0]*p[0] + p[1]*p[1] + p[2]*p[2]);
 	}
 
 	void normalize()
 	{
-		if (x == 0.0 && y == 0.0 && z == 0.0)
+		if (p[0] == 0.0 && p[1] == 0.0 && p[2] == 0.0)
 		{
-			x = 1.0;
+			p[0] = 1.0;
 		}
 		else
 		{
 			double l = 1.0 / length();
-			x *= l;
-			y *= l;
-			z *= l;
+			p[0] *= l;
+			p[1] *= l;
+			p[2] *= l;
 		}
 	}
 
-	double dot(Vec &p)
+	double dot(Vec &v)
 	{
-		return (x * p.x) + (y * p.y) + (z * p.z);
+		return (p[0] * v.p[0]) + (p[1] * v.p[1]) + (p[2] * v.p[2]);
 	}
 
-	Vec cross(Vec &p)
+	Vec cross(Vec &v)
 	{
 		return Vec(
-			y * p.z - z * p.y,
-			z * p.x - x * p.z,
-			x * p.y - y * p.x
+			p[1] * v.p[2] - p[2] * v.p[1],
+			p[2] * v.p[0] - p[0] * v.p[2],
+			p[0] * v.p[1] - p[1] * v.p[0]
 			);
 	}
 
 	Vec operator+(Vec &v)
 	{
 		return Vec(
-			x + v.x,
-			y + v.y,
-			z + v.z
+			p[0] + v.p[0],
+			p[1] + v.p[1],
+			p[2] + v.p[2]
 			);
 	}
 
 	Vec operator-(Vec &v)
 	{
 		return Vec(
-			x - v.x,
-			y - v.y,
-			z - v.z
+			p[0] - v.p[0],
+			p[1] - v.p[1],
+			p[2] - v.p[2]
 			);
 	}
 
 	void operator-=(Vec &v)
 	{
-		x -= v.x;
-		y -= v.y;
-		z -= v.z;
+		p[0] -= v.p[0];
+		p[1] -= v.p[1];
+		p[2] -= v.p[2];
 	}
 
 	void operator+=(Vec &v)
 	{
-		x += v.x;
-		y += v.y;
-		z += v.z;
+		p[0] += v.p[0];
+		p[1] += v.p[1];
+		p[2] += v.p[2];
 	}
 
 	Vec operator-()
 	{
-		return Vec(-x, -y, -z);
+		return Vec(-p[0], -p[1], -p[2]);
 	}
 
 	Vec operator*(double n)
 	{
 		return Vec(
-			x * n,
-			y * n,
-			z * n
+			p[0] * n,
+			p[1] * n,
+			p[2] * n
 			);
 	}
 
@@ -114,24 +112,24 @@ public:
 	{
 		n = 1.0 / n;;
 		return Vec(
-			x * n,
-			y * n,
-			z * n
+			p[0] * n,
+			p[1] * n,
+			p[2] * n
 			);
 	}
 
 	Vec minVec(Vec &v)
 	{
-		return Vec(min(x, v.x), min(y, v.y), min(z, v.z));
+		return Vec(min(p[0], v.p[0]), min(p[1], v.p[1]), min(p[2], v.p[2]));
 	}
 
 	Vec maxVec(Vec &v)
 	{
-		return Vec(max(x, v.x), max(y, v.y), max(z, v.z));
+		return Vec(max(p[0], v.p[0]), max(p[1], v.p[1]), max(p[2], v.p[2]));
 	}
 
 	void printToConsole(){
-		cout << '[' << x << ", " << y << ", " << z << ']' << endl;
+		cout << '[' << p[0] << ", " << p[1] << ", " << p[2] << ']' << endl;
 	}
 
 	~Vec()

@@ -29,7 +29,7 @@ public:
 	{
 		double _dummy;
 		if (boundingBox.intersect(ray, _dummy))
-			return GeoContainer::intersect(ray, closestTri, shortestDist, depth = 0);
+			return GeoContainer::intersect(ray, closestTri, shortestDist, depth);
 		else
 			return false;
 	}

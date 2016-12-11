@@ -8,6 +8,7 @@
 #include "Ray.h"
 #include "Screen.h"
 #include "Scene.h"
+#include "Pixel.h"
 
 #include "IOfunctions.h"
 #include "globals.h"
@@ -17,15 +18,14 @@ const int IMG_W = 300;
 const int IMG_H = 300;
 
 const double SCN_MAXDIST = 5000;
-const double SCN_MAXRAYDIST = 5000;
-const double SCN_RAYBIAS = 0.01;
+const double SCN_RAYBIAS = 0.001;
 const int SCN_MAXDEPTH = 1;
 
 const int SHD_MAXSAMPLES = 4;
 
-const int SAMP_MINSAMPLES = 10;
-const int SAMP_MAXSAMPLES = 100;
-const double SAMP_MINVARIANCE = 0.001;
+const int SAMP_MINSAMPLES = 8;
+const int SAMP_MAXSAMPLES = 20;
+const double SAMP_MAXVARIANCE = 0.001;
 ////END OF SCENE SETUP////
 
 unsigned int g_triIntersections = 0;
@@ -58,12 +58,7 @@ double randfneg()
 Pixel renderPixel(Ray& ray, Scene& scene, int depth = 0)
 {
 	double intersectDist;
-	double shortestDist;
-
-	if (depth > 0)
-		shortestDist = SCN_MAXDIST;
-	else
-		shortestDist = SCN_MAXRAYDIST;
+	double shortestDist = SCN_MAXDIST;
 	
 	Tri* closestTri;
 	bool intersected;
@@ -83,49 +78,49 @@ Pixel renderPixel(Ray& ray, Scene& scene, int depth = 0)
 
 #ifdef DEBUG_OUTPUTPOS
 	Vec temppos = ray.p + (ray.dir * shortestDist);
-	return Pixel(abs(temppos.x*0.1), abs(temppos.y*0.1), abs(temppos.z*0.1), 1);
+	return Pixel(abs(temppos[0]*0.1), abs(temppos[1]*0.1), abs(temppos[2]*0.1), 1);
 #endif
 
 	if (intersected){
 		if (depth < SCN_MAXDEPTH && closestTri->mtl->hasDiffuse())
 		{
-			if (shortestDist < SCN_MAXDIST)
-			{
-				Pixel outPixel;
-				Ray indirectRay;
-				indirectRay.setPos(ray.p + (ray.dir * shortestDist) + (closestTri->n * SCN_RAYBIAS));
+			Pixel outPixel;
+			Pixel nextBounce;
+			Ray indirectRay;
+			indirectRay.setPos(ray.pos + (ray.dir * shortestDist) + (closestTri->n * SCN_RAYBIAS));
 
-				for (int i = 0; i < max(SHD_MAXSAMPLES/(depth+1), 1); i++)
+			int numsamples = max(SHD_MAXSAMPLES / (depth + 1), 1);
+			for (int i = 0; i < numsamples; i++)
+			{
+				do 
 				{
 					indirectRay.setDir(randfneg(), randfneg(), randfneg());
-					indirectRay.dir.normalize();
+				} while (indirectRay.dir.dot(indirectRay.dir) > 1.0);
 
-					if (indirectRay.dir.dot((*closestTri).n) < 0.0)
-						indirectRay.dir = -indirectRay.dir;
-					
-					Pixel nextBounce = renderPixel(indirectRay, scene, depth + 1);
+				indirectRay.dir.normalize();
 
-					nextBounce.color *= closestTri->mtl->Kd;
-					nextBounce.color += closestTri->mtl->Ka;
+				if (indirectRay.dir.dot(closestTri->n) < 0.0)
+					indirectRay.dir = -indirectRay.dir;
+									
+				nextBounce = renderPixel(indirectRay, scene, depth + 1);
+				nextBounce.color *= closestTri->mtl->Kd;
+				nextBounce.color += closestTri->mtl->Ka;
 					
-					outPixel.color += nextBounce.color;
-				}
-				outPixel /= SHD_MAXSAMPLES;
-				outPixel.a = 1.0;
-				return outPixel;
+				outPixel.color += nextBounce.color;
 			}
+			outPixel /= numsamples;
+			outPixel.a = 1.0;
+			return outPixel;
 		}
 		else//if depth == SCN_MAXDEPTH (last bounce)
 		{
-			if (shortestDist < SCN_MAXDIST)
-			{
-				return Pixel(closestTri->mtl->Ka, 1);
-			}
+			return Pixel(closestTri->mtl->Ka, 1);
 		}
 	}
-
-	//no intersection, return sky color
-	return Pixel(scene.skyColor.Ka, 0);
+	else//!intersected, return sky color
+	{
+		return Pixel(scene.skyColor.Ka, 0);
+	}
 }
 
 int main()
@@ -135,10 +130,8 @@ int main()
 	string objfile = "simpleboxesshaded";
 	string rootdir = "C:/Users/Yegor-s/Desktop/raytracer/";
 	Scene myScene = readObj(rootdir + "objects/" + objfile + ".obj");
-	myScene.skyColor.Ka = { 0.2, 0.7, 1.0 };
+	myScene.skyColor.Ka = { 0.1, 0.2, 0.4 };
 	cout << myScene.numberOfTris() << " triangles in scene" << endl;
-	myScene.mlib->printToConsole();
-
 //	myScene.buildBboxHierarchy();
 //	myScene.findEmptyChildren();
 
@@ -202,7 +195,7 @@ int main()
 
 				variance -= currentPixel;
 
-				if (variance.magnitude() < SAMP_MINVARIANCE)
+				if (variance.magnitude() < SAMP_MAXVARIANCE)
 					varianceCombo++;
 				else
 					varianceCombo = 0;

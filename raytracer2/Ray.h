@@ -3,41 +3,38 @@
 class Ray
 {
 public:
-	Vec p;
+	Vec pos;
 	Vec dir;
-
-	Vec hitPoint;
-	
 
 	Ray()
 	{
 	}
 
-	Ray(Vec pIn, Vec dirIn)
+	Ray(Vec posIn, Vec dirIn)
 	{
-		p = pIn;
+		pos = posIn;
 		dir = dirIn;
 	}
 
 	void setDir(double x, double y, double z)
 	{
-		dir.x = x;
-		dir.y = y;
-		dir.z = z;
+		dir.p[0] = x;
+		dir.p[1] = y;
+		dir.p[2] = z;
 	}
 
 	void setPos(double x, double y, double z)
 	{
-		p.x = x;
-		p.y = y;
-		p.z = z;
+		pos.p[0] = x;
+		pos.p[1] = y;
+		pos.p[2] = z;
 	}
 
 	void setPos(Vec v)
 	{
-		p.x = v.x;
-		p.y = v.y;
-		p.z = v.z;
+		pos.p[0] = v.p[0];
+		pos.p[1] = v.p[1];
+		pos.p[2] = v.p[2];
 	}
 	
 	~Ray()

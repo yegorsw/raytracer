@@ -38,13 +38,13 @@ public:
 	void generateBbox()
 	{
 		boundingBox = BBox();
-		double minX = triList[0].p0.x;
-		double minY = triList[0].p0.y;
-		double minZ = triList[0].p0.z;
+		double minX = triList[0].p0[0];
+		double minY = triList[0].p0[1];
+		double minZ = triList[0].p0[2];
 
-		double maxX = triList[0].p0.x;
-		double maxY = triList[0].p0.y;
-		double maxZ = triList[0].p0.z;
+		double maxX = triList[0].p0[0];
+		double maxY = triList[0].p0[1];
+		double maxZ = triList[0].p0[2];
 
 		for (int i = 0; i < triList.size(); i++)
 		{
@@ -65,7 +65,7 @@ public:
 
 	bool intersect(Ray& ray, Tri*& closestTri, double& shortestDist)
 	{
-		bool contains = boundingBox.contains(ray.p);
+		bool contains = boundingBox.contains(ray.pos);
 		double intersectDist = 0.0;
 
 		if (!contains)
@@ -124,21 +124,21 @@ public:
 			{
 				if (depth % 3 == 0)
 				{
-					if ((*t).center().x < center.x)
+					if ((*t).center()[0] < center[0])
 						moveTriToGroup(t, *child1);
 					else
 						moveTriToGroup(t, *child2);
 				}
 				else if (depth % 3 == 1)
 				{
-					if ((*t).center().y < center.y)
+					if ((*t).center()[1] < center[1])
 						moveTriToGroup(t, *child1);
 					else
 						moveTriToGroup(t, *child2);
 				}
 				else if (depth % 3 == 2)
 				{
-					if ((*t).center().z < center.z)
+					if ((*t).center()[2] < center[2])
 						moveTriToGroup(t, *child1);
 					else
 						moveTriToGroup(t, *child2);

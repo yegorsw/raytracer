@@ -7,7 +7,7 @@ using namespace std;
 class Screen
 {
 private:
-	vector< vector<Pixel> > image;
+	vector<vector<Pixel>> image;
 
 public:
 	

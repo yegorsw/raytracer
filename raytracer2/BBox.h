@@ -21,14 +21,14 @@ public:
 	bool contains(Vec &vec)
 	{
 		return
-			vec.x >= minCoord.x && vec.x <= maxCoord.x &&
-			vec.y >= minCoord.y && vec.y <= maxCoord.y &&
-			vec.z >= minCoord.z && vec.z <= maxCoord.z;
+			vec.p[0] >= minCoord.p[0] && vec.p[0] <= maxCoord.p[0] &&
+			vec.p[1] >= minCoord.p[1] && vec.p[1] <= maxCoord.p[1] &&
+			vec.p[2] >= minCoord.p[2] && vec.p[2] <= maxCoord.p[2];
 	}
 
 	bool intersect(Ray& ray, double& dist)
 	{
-		if (contains(ray.p))
+		if (contains(ray.pos))
 		{
 			dist = 0.0;
 			return true;
@@ -39,17 +39,17 @@ public:
 		double ratio;
 
 		//z planes
-		if (ray.dir.z != 0)
+		if (ray.dir.p[2] != 0)
 		{
-			if (ray.dir.z > 0)
-				planePos = minCoord.z;
+			if (ray.dir.p[2] > 0)
+				planePos = minCoord.p[2];
 			else
-				planePos = maxCoord.z;
+				planePos = maxCoord.p[2];
 
-			ratio = (planePos - ray.p.z) / ray.dir.z;
-			hitpos = ray.p + (ray.dir * ratio);
+			ratio = (planePos - ray.pos.p[2]) / ray.dir.p[2];
+			hitpos = ray.pos + (ray.dir * ratio);
 
-			if (hitpos.x >= minCoord.x && hitpos.x <= maxCoord.x && hitpos.y >= minCoord.y && hitpos.y <= maxCoord.y)
+			if (hitpos.p[0] >= minCoord.p[0] && hitpos.p[0] <= maxCoord.p[0] && hitpos.p[1] >= minCoord.p[1] && hitpos.p[1] <= maxCoord.p[1])
 			{
 				g_bboxIntersections++;
 				dist = ratio;
@@ -58,17 +58,17 @@ public:
 		}
 
 		//y planes
-		if (ray.dir.y != 0)
+		if (ray.dir.p[1] != 0)
 		{
-			if (ray.dir.y > 0)
-				planePos = minCoord.y;
+			if (ray.dir.p[1] > 0)
+				planePos = minCoord.p[1];
 			else
-				planePos = maxCoord.y;
+				planePos = maxCoord.p[1];
 
-			ratio = (planePos - ray.p.y) / ray.dir.y;
-			hitpos = ray.p + (ray.dir * ratio);
+			ratio = (planePos - ray.pos.p[1]) / ray.dir.p[1];
+			hitpos = ray.pos + (ray.dir * ratio);
 
-			if (hitpos.x >= minCoord.x && hitpos.x <= maxCoord.x && hitpos.z >= minCoord.z && hitpos.z <= maxCoord.z)
+			if (hitpos.p[0] >= minCoord.p[0] && hitpos.p[0] <= maxCoord.p[0] && hitpos.p[2] >= minCoord.p[2] && hitpos.p[2] <= maxCoord.p[2])
 			{
 				g_bboxIntersections++;
 				dist = ratio;
@@ -77,17 +77,17 @@ public:
 		}
 
 		//x planes
-		if (ray.dir.x != 0)
+		if (ray.dir.p[0] != 0)
 		{
-			if (ray.dir.x > 0)
-				planePos = minCoord.x;
+			if (ray.dir.p[0] > 0)
+				planePos = minCoord.p[0];
 			else
-				planePos = maxCoord.x;
+				planePos = maxCoord.p[0];
 
-			ratio = (planePos - ray.p.x) / ray.dir.x;
-			hitpos = ray.p + (ray.dir * ratio);
+			ratio = (planePos - ray.pos.p[0]) / ray.dir.p[0];
+			hitpos = ray.pos + (ray.dir * ratio);
 
-			if (hitpos.y >= minCoord.y && hitpos.y <= maxCoord.y && hitpos.z >= minCoord.z && hitpos.z <= maxCoord.z)
+			if (hitpos.p[1] >= minCoord.p[1] && hitpos.p[1] <= maxCoord.p[1] && hitpos.p[2] >= minCoord.p[2] && hitpos.p[2] <= maxCoord.p[2])
 			{
 				g_bboxIntersections++;
 				dist = ratio;
@@ -106,7 +106,7 @@ public:
 
 	double volume()
 	{
-		return (maxCoord.x - minCoord.x) * (maxCoord.y - minCoord.y) * (maxCoord.z - minCoord.z);
+		return (maxCoord.p[0] - minCoord.p[0]) * (maxCoord.p[1] - minCoord.p[1]) * (maxCoord.p[2] - minCoord.p[2]);
 	}
 
 	BBox merged(BBox& box)
@@ -116,9 +116,9 @@ public:
 
 	int largestAxis()
 	{
-		int x = maxCoord.x - minCoord.x;
-		int y = maxCoord.y - minCoord.y;
-		int z = maxCoord.z - minCoord.z;
+		int x = maxCoord.p[0] - minCoord.p[0];
+		int y = maxCoord.p[1] - minCoord.p[1];
+		int z = maxCoord.p[2] - minCoord.p[2];
 		int m = max(max(x, y), z);
 		if (m == x)
 			return 0;
