@@ -80,6 +80,15 @@ public:
 			);
 	}
 
+	Vec operator*(Vec &v)
+	{
+		return Vec(
+			p[0] * v.p[0],
+			p[1] * v.p[1],
+			p[2] * v.p[2]
+		);
+	}
+
 	void operator-=(Vec &v)
 	{
 		p[0] -= v.p[0];

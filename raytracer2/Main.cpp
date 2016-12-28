@@ -19,12 +19,12 @@ const int IMG_H = 300;
 
 const double SCN_MAXDIST = 5000;
 const double SCN_RAYBIAS = 0.001;
-const int SCN_MAXDEPTH = 1;
+const int SCN_MAXDEPTH = 2;
 
-const int SHD_MAXSAMPLES = 4;
+const int SHD_MAXSAMPLES = 16;
 
-const int SAMP_MINSAMPLES = 8;
-const int SAMP_MAXSAMPLES = 20;
+const int SAMP_MINSAMPLES = 24;
+const int SAMP_MAXSAMPLES = 512;
 const double SAMP_MAXVARIANCE = 0.001;
 ////END OF SCENE SETUP////
 
@@ -64,9 +64,15 @@ Pixel renderPixel(Ray& ray, Scene& scene, int depth = 0)
 	bool intersected;
 
 	intersected = scene.intersect(ray, closestTri, shortestDist);
-
+	
 #ifdef DEBUG_OUTPUTDIST
 	return Pixel(shortestDist, shortestDist, shortestDist, 1);
+#endif
+
+#ifdef DEBUG_OUTPUTNORMALS
+	if (intersected)
+		return Pixel(closestTri->n.p[0], closestTri->n.p[1], closestTri->n.p[2], 1);
+	return Pixel(0, 0, 0, 0);
 #endif
 
 #ifdef DEBUG_OUTPUTALPHA
@@ -92,18 +98,17 @@ Pixel renderPixel(Ray& ray, Scene& scene, int depth = 0)
 			int numsamples = max(SHD_MAXSAMPLES / (depth + 1), 1);
 			for (int i = 0; i < numsamples; i++)
 			{
-				do 
-				{
-					indirectRay.setDir(randfneg(), randfneg(), randfneg());
-				} while (indirectRay.dir.dot(indirectRay.dir) > 1.0);
+				do indirectRay.setDir(randfneg(), randfneg(), randfneg());
+				while (indirectRay.dir.dot(indirectRay.dir) > 1.0);
 
 				indirectRay.dir.normalize();
 
 				if (indirectRay.dir.dot(closestTri->n) < 0.0)
 					indirectRay.dir = -indirectRay.dir;
-									
+						
 				nextBounce = renderPixel(indirectRay, scene, depth + 1);
 				nextBounce.color *= closestTri->mtl->Kd;
+				nextBounce.color *= indirectRay.dir.dot(closestTri->n);
 				nextBounce.color += closestTri->mtl->Ka;
 					
 				outPixel.color += nextBounce.color;
@@ -130,7 +135,7 @@ int main()
 	string objfile = "simpleboxesshaded";
 	string rootdir = "C:/Users/Yegor-s/Desktop/raytracer/";
 	Scene myScene = readObj(rootdir + "objects/" + objfile + ".obj");
-	myScene.skyColor.Ka = { 0.1, 0.2, 0.4 };
+	//myScene.skyColor.Ka = { 0.1, 0.2, 0.4 };
 	cout << myScene.numberOfTris() << " triangles in scene" << endl;
 //	myScene.buildBboxHierarchy();
 //	myScene.findEmptyChildren();
@@ -172,8 +177,8 @@ int main()
 			double s = 1.0;
 			while (varianceCombo < SAMP_MINSAMPLES && s <= SAMP_MAXSAMPLES)
 			{
-				rx = randfneg();
-				ry = randfneg();
+				rx = randfneg()*0.5;
+				ry = randfneg()*0.5;
 //				rx = rx * rx * sign(rx) * 0.5;
 //				rx = ry * ry * sign(ry) * 0.5;
 

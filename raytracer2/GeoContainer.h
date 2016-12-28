@@ -97,7 +97,7 @@ public:
 	{
 		//intersect all tris first
 		double dist;
-		double prevDist = shortestDist;
+		bool intersection = false;
 		for (vector<Tri*>::iterator t = tris.begin(); t != tris.end(); t++)
 		{
 			if ((**t).intersect(ray, dist))
@@ -106,6 +106,7 @@ public:
 				{
 					closestTri = *t;
 					shortestDist = dist;
+					intersection = true;
 				}
 			}
 		}
@@ -113,6 +114,7 @@ public:
 		//if has children, intersect them
 		if (child1 && child2)
 		{
+			cout << "children intersection";
 			double dist1, dist2;
 			bool hit1 = child1->boundingBox.intersect(ray, dist1);
 			bool hit2 = child2->boundingBox.intersect(ray, dist2);
@@ -154,7 +156,7 @@ public:
 			
 		}
 
-		return shortestDist < prevDist;
+		return intersection;
 	}
 
 	int numberOfTris()

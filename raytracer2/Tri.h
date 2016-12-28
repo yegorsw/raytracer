@@ -138,7 +138,7 @@ public:
 
 	    dist = edge02.dot(qvec) * invDet;
 
-		return true;
+		return dist > 0.0;
 	}
 
 	void printToConsole(){
