@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctime>
+#include <thread>
 
 #include "Ray.h"
 #include "Screen.h"
@@ -14,18 +15,20 @@
 #include "globals.h"
 
 ////SCENE SETUP//// - 25.5 seconds
-const int IMG_W = 300;
-const int IMG_H = 300;
+const int IMG_W = 600;
+const int IMG_H = 600;
 
 const double SCN_MAXDIST = 5000;
 const double SCN_RAYBIAS = 0.001;
-const int SCN_MAXDEPTH = 2;
+const int SCN_MAXDEPTH = 1;
 
-const int SHD_MAXSAMPLES = 16;
+const int SHD_MAXSAMPLES = 4;
 
-const int SAMP_MINSAMPLES = 24;
+const int SAMP_MINSAMPLES = 4;
 const int SAMP_MAXSAMPLES = 512;
-const double SAMP_MAXVARIANCE = 0.001;
+const double SAMP_MAXVARIANCE = 1;
+
+const int NUM_THREADS = 4;
 ////END OF SCENE SETUP////
 
 unsigned int g_triIntersections = 0;
@@ -34,11 +37,6 @@ unsigned int g_bboxIntersections = 0;
 const double invRandMax = (1.0 / (double)RAND_MAX);
 
 using namespace std;
-
-int sign(double n)
-{
-	return n >= 0 ? 1 : -1;
-}
 
 double length(double a, double b)
 {
@@ -110,7 +108,7 @@ Pixel renderPixel(Ray& ray, Scene& scene, int depth = 0)
 				nextBounce.color *= closestTri->mtl->Kd;
 				nextBounce.color *= indirectRay.dir.dot(closestTri->n);
 				nextBounce.color += closestTri->mtl->Ka;
-					
+				
 				outPixel.color += nextBounce.color;
 			}
 			outPixel /= numsamples;
@@ -128,21 +126,70 @@ Pixel renderPixel(Ray& ray, Scene& scene, int depth = 0)
 	}
 }
 
+void renderThread(Scene& scene, Screen& screen, int screenx, int screeny)
+{
+	int sl = 0;
+	double samples;
+	double s = 1;
+	Pixel samplePixel, outPixel, variance;
+
+	Ray primaryRay;
+
+	int varianceCombo = 0;
+
+	double dirx, diry;
+
+	while (varianceCombo > SAMP_MINSAMPLES && sl < SAMP_MAXSAMPLES)
+	{
+		samples = pow(2, sl);
+		for (double x = 0; x < samples; x++)
+		{
+			for (double y = 0; y < samples; y++)
+			{
+				dirx = ((x + randfneg() - IMG_W * 0.5) / (double)IMG_H) * 2;
+				diry = ((y + randfneg() - IMG_H * 0.5) / (double)IMG_H) * -2;
+				primaryRay.setDir(dirx, diry, -2);
+				primaryRay.dir.normalize();
+
+				variance = outPixel;
+				samplePixel = renderPixel(primaryRay, scene);
+
+				outPixel *= (s - 1.0) / s;
+
+				samplePixel /= s;
+
+				outPixel += samplePixel;
+
+				variance -= outPixel;
+
+				s++;
+
+				if (variance.magnitude() < SAMP_MAXVARIANCE)
+					varianceCombo++;
+				else
+					varianceCombo = 0;
+			}
+		}
+		sl++;
+	}
+	screen.setPixel(screenx, screeny, outPixel);
+}
+
 int main()
 {
 	srand(12345);
 
-	string objfile = "simpleboxesshaded";
+	string objfile = "lampglow";
 	string rootdir = "C:/Users/Yegor-s/Desktop/raytracer/";
 	Scene myScene = readObj(rootdir + "objects/" + objfile + ".obj");
-	//myScene.skyColor.Ka = { 0.1, 0.2, 0.4 };
+//	myScene.skyColor.Ka = { 0.1, 0.2, 0.4 };
 	cout << myScene.numberOfTris() << " triangles in scene" << endl;
-//	myScene.buildBboxHierarchy();
+	cout << "Building BVH tree" << endl;
+	myScene.buildBboxHierarchy();
 //	myScene.findEmptyChildren();
 
 	Screen myScreen(IMG_W, IMG_H);
 	Ray primaryRay;
-	Vec dir;
 	primaryRay.setPos(0, 0, 0);
 
 	double sx, sy, rx, ry;

@@ -60,37 +60,119 @@ public:
 		else {
 			boundingBox = BBox(Vec(minX, minY, minZ), Vec(maxX, maxY, maxZ));
 		}
-
-
-		if (child1)
-			boundingBox = boundingBox.merged(child1->boundingBox);
-
-		if (child2)
-			boundingBox = boundingBox.merged(child2->boundingBox);
 	}
 
-	double calculateSplitCost(double splitPos, char splitAxis)
+	double cost()
 	{
-		return 0;
+		return boundingBox.area() * numberOfTris();
 	}
 
-	void split(double splitPos, char splitAxis)
+	double calculateSplitCost(double splitPos, int axis)
+	{
+		double splitCost;
+		GeoContainer dummy1, dummy2;
+
+		double splitPosWorldSpace;
+		splitPosWorldSpace = boundingBox.minCoord.p[axis] * (1.0 - splitPos) + boundingBox.maxCoord.p[axis] * (splitPos);
+
+		for (vector<Tri*>::iterator t = tris.begin(); t != tris.end(); t++)
+		{
+			if ((**t).p0.p[axis] < splitPosWorldSpace || (**t).p1.p[axis] < splitPosWorldSpace || (**t).p2.p[axis] < splitPosWorldSpace)
+				dummy1.addTri(*t);
+
+			if ((**t).p0.p[axis] > splitPosWorldSpace || (**t).p1.p[axis] > splitPosWorldSpace || (**t).p2.p[axis] > splitPosWorldSpace)
+				dummy2.addTri(*t);
+		}
+
+		dummy1.boundingBox = boundingBox;
+		dummy2.boundingBox = boundingBox;
+
+		dummy1.generateBbox(true);
+		dummy2.generateBbox(true);
+
+		return dummy1.cost() + dummy2.cost();
+	}
+
+	void split(double splitPos, int axis)
 	{
 		child1 = new GeoContainer();
 		child2 = new GeoContainer();
 
 		double splitPosWorldSpace;
+		splitPosWorldSpace = boundingBox.minCoord.p[axis] * (1.0 - splitPos) + boundingBox.maxCoord.p[axis] * (splitPos);
 
-		for (int i = 0; i < 3; i++)
+		child1->boundingBox = boundingBox;
+		child1->boundingBox.maxCoord.p[axis] = splitPosWorldSpace;
+
+		child2->boundingBox = boundingBox;
+		child2->boundingBox.minCoord.p[axis] = splitPosWorldSpace;
+
+		bool removeFromParent;
+
+		for (vector<Tri*>::iterator t = tris.begin(); t != tris.end(); )
 		{
-			splitPosWorldSpace = (boundingBox.minCoord * (1.0 - splitPos) + boundingBox.maxCoord * (splitPos)).p[0];
+			removeFromParent = false;
 
+			if ((**t).p0.p[axis] < splitPosWorldSpace || (**t).p1.p[axis] < splitPosWorldSpace || (**t).p2.p[axis] < splitPosWorldSpace)
+				child1->addTri(*t); removeFromParent = true;
+
+			if ((**t).p0.p[axis] > splitPosWorldSpace || (**t).p1.p[axis] > splitPosWorldSpace || (**t).p2.p[axis] > splitPosWorldSpace)
+				child2->addTri(*t); removeFromParent = true;
+
+			if (removeFromParent)
+				t = tris.erase(t);
+			else
+				t++;
 		}
+		
+		if (child1->numberOfTris() == 0)
+			delete child1;
+		else
+			child1->generateBbox(true);
+
+		if (child2->numberOfTris() == 0)
+			delete child2;
+		else
+			child2->generateBbox(true);
 	}
 
 	void buildBboxHierarchy(int depth = 0)
 	{
+		if (depth < 99)
+		{
+			int bestSplitAxis;
+			double bestSplitPos;
 
+			double bestSplitCost = cost();
+			double splitCost;
+
+			bool dosplit = false;
+
+			double stepsize = 0.05;
+			for (double splitpos = stepsize; splitpos < 1.0; splitpos += stepsize)
+			{
+				for (int axis = 0; axis < 3; axis++)
+				{
+					splitCost = calculateSplitCost(splitpos, axis) * 1.2;
+
+					if (splitCost < bestSplitCost)
+					{
+						bestSplitCost = splitCost;
+						bestSplitAxis = axis;
+						bestSplitPos = splitpos;
+						dosplit = true;
+					}
+				}
+			}
+
+			if (dosplit)
+			{
+				cout << "building depth " << depth << endl;
+				split(bestSplitPos, bestSplitAxis);
+				child1->buildBboxHierarchy(depth + 1);
+				child2->buildBboxHierarchy(depth + 1);
+			}
+		}
 	}
 
 	bool intersect(Ray& ray, Tri*& closestTri, double& shortestDist, int depth = 0)
@@ -111,50 +193,13 @@ public:
 			}
 		}
 
-		//if has children, intersect them
-		if (child1 && child2)
-		{
-			cout << "children intersection";
-			double dist1, dist2;
-			bool hit1 = child1->boundingBox.intersect(ray, dist1);
-			bool hit2 = child2->boundingBox.intersect(ray, dist2);
-			
-			//if ray passes through both bounding boxes
-			if (hit1 && hit2)
-			{
-				//intersect closer child first
-				if (dist1 < dist2)
-				{
-					if (dist1 < shortestDist)
-						child1->intersect(ray, closestTri, shortestDist, depth + 1);
+		double bboxDist;
 
-					if (dist2 < shortestDist)
-						child2->intersect(ray, closestTri, shortestDist, depth + 1);
-				}
-				else
-				{
-					if (dist2 < shortestDist)
-						child2->intersect(ray, closestTri, shortestDist, depth + 1);
-
-					if (dist1 < shortestDist)
-						child1->intersect(ray, closestTri, shortestDist, depth + 1);
-				}
-
-			}
-			//if ray only passes through child1
-			else if (hit1 && !hit2)
-			{
-				if (dist1 < shortestDist)
-					child1->intersect(ray, closestTri, shortestDist, depth + 1);
-			}
-			//if ray only passes through child2
-			else if (hit2 && !hit1)
-			{
-				if (dist2 < shortestDist)
-					child1->intersect(ray, closestTri, shortestDist, depth + 1);
-			}
-			
-		}
+		if(child1 && child1->boundingBox.intersect(ray, bboxDist))
+			intersection = intersection || child1->intersect(ray, closestTri, shortestDist, depth + 1);
+		
+		if(child2 && child2->boundingBox.intersect(ray, bboxDist))
+			intersection = intersection || child2->intersect(ray, closestTri, shortestDist, depth + 1);
 
 		return intersection;
 	}

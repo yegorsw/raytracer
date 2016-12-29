@@ -52,8 +52,11 @@ public:
 			if (hitpos.p[0] >= minCoord.p[0] && hitpos.p[0] <= maxCoord.p[0] && hitpos.p[1] >= minCoord.p[1] && hitpos.p[1] <= maxCoord.p[1])
 			{
 				g_bboxIntersections++;
-				dist = ratio;
-				return true;
+				if (ratio >= 0.0)
+				{
+					dist = ratio;
+					return true;
+				}
 			}
 		}
 
@@ -71,8 +74,11 @@ public:
 			if (hitpos.p[0] >= minCoord.p[0] && hitpos.p[0] <= maxCoord.p[0] && hitpos.p[2] >= minCoord.p[2] && hitpos.p[2] <= maxCoord.p[2])
 			{
 				g_bboxIntersections++;
-				dist = ratio;
-				return true;
+				if (ratio >= 0.0)
+				{
+					dist = ratio;
+					return true;
+				}
 			}
 		}
 
@@ -90,8 +96,11 @@ public:
 			if (hitpos.p[1] >= minCoord.p[1] && hitpos.p[1] <= maxCoord.p[1] && hitpos.p[2] >= minCoord.p[2] && hitpos.p[2] <= maxCoord.p[2])
 			{
 				g_bboxIntersections++;
-				dist = ratio;
-				return true;
+				if (ratio >= 0.0)
+				{
+					dist = ratio;
+					return true;
+				}
 			}
 		}
 		
@@ -107,6 +116,12 @@ public:
 	double volume()
 	{
 		return (maxCoord.p[0] - minCoord.p[0]) * (maxCoord.p[1] - minCoord.p[1]) * (maxCoord.p[2] - minCoord.p[2]);
+	}
+
+	double area()
+	{
+		Vec box = maxCoord - minCoord;
+		return 2.0 * (box.p[0] * box.p[1] + box.p[0] * box.p[2] + box.p[1] * box.p[2]);
 	}
 
 	BBox merged(BBox& box)
