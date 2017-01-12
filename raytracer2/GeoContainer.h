@@ -3,6 +3,7 @@
 #include "Tri.h"
 #include "BBox.h"
 #include "globals.h"
+#include "ymath.h"
 
 class GeoContainer
 {
@@ -64,7 +65,7 @@ public:
 
 	double cost()
 	{
-		return boundingBox.area() * numberOfTris();
+		return boundingBox.area() * numberOfTris() * 0.0001;
 	}
 
 	double calculateSplitCost(double splitPos, int axis)
@@ -73,7 +74,7 @@ public:
 		GeoContainer dummy1, dummy2;
 
 		double splitPosWorldSpace;
-		splitPosWorldSpace = boundingBox.minCoord.p[axis] * (1.0 - splitPos) + boundingBox.maxCoord.p[axis] * (splitPos);
+		splitPosWorldSpace = lerp(boundingBox.minCoord.p[axis], boundingBox.maxCoord.p[axis], splitPos);
 
 		for (vector<Tri*>::iterator t = tris.begin(); t != tris.end(); t++)
 		{
@@ -83,9 +84,15 @@ public:
 			if ((**t).p0.p[axis] > splitPosWorldSpace || (**t).p1.p[axis] > splitPosWorldSpace || (**t).p2.p[axis] > splitPosWorldSpace)
 				dummy2.addTri(*t);
 		}
-
+		
 		dummy1.boundingBox = boundingBox;
+		dummy1.boundingBox.maxCoord.p[axis] = splitPosWorldSpace;
+
 		dummy2.boundingBox = boundingBox;
+		dummy2.boundingBox.minCoord.p[axis] = splitPosWorldSpace;
+
+		if (dummy1.numberOfTris() == 0 || dummy2.numberOfTris() == 0)
+			return cost() + 1.0;
 
 		dummy1.generateBbox(true);
 		dummy2.generateBbox(true);
@@ -99,7 +106,7 @@ public:
 		child2 = new GeoContainer();
 
 		double splitPosWorldSpace;
-		splitPosWorldSpace = boundingBox.minCoord.p[axis] * (1.0 - splitPos) + boundingBox.maxCoord.p[axis] * (splitPos);
+		splitPosWorldSpace = lerp(boundingBox.minCoord.p[axis], boundingBox.maxCoord.p[axis], splitPos);
 
 		child1->boundingBox = boundingBox;
 		child1->boundingBox.maxCoord.p[axis] = splitPosWorldSpace;
@@ -107,39 +114,36 @@ public:
 		child2->boundingBox = boundingBox;
 		child2->boundingBox.minCoord.p[axis] = splitPosWorldSpace;
 
-		bool removeFromParent;
-
-		for (vector<Tri*>::iterator t = tris.begin(); t != tris.end(); )
+		for (vector<Tri*>::iterator t = tris.begin(); t != tris.end(); t++)
 		{
-			removeFromParent = false;
-
 			if ((**t).p0.p[axis] < splitPosWorldSpace || (**t).p1.p[axis] < splitPosWorldSpace || (**t).p2.p[axis] < splitPosWorldSpace)
-				child1->addTri(*t); removeFromParent = true;
-
-			if ((**t).p0.p[axis] > splitPosWorldSpace || (**t).p1.p[axis] > splitPosWorldSpace || (**t).p2.p[axis] > splitPosWorldSpace)
-				child2->addTri(*t); removeFromParent = true;
-
-			if (removeFromParent)
-				t = tris.erase(t);
-			else
-				t++;
+			{
+				child1->addTri(*t);
+			}
+			if ((**t).p0.p[axis] >= splitPosWorldSpace || (**t).p1.p[axis] >= splitPosWorldSpace || (**t).p2.p[axis] >= splitPosWorldSpace)
+			{
+				child2->addTri(*t);
+			}
 		}
 		
-		if (child1->numberOfTris() == 0)
-			delete child1;
-		else
+		tris = vector<Tri*>();
+
+		if (child1->numberOfTris() > 0)
 			child1->generateBbox(true);
 
-		if (child2->numberOfTris() == 0)
-			delete child2;
-		else
+		if (child2->numberOfTris() > 0)
 			child2->generateBbox(true);
 	}
 
 	void buildBboxHierarchy(int depth = 0)
 	{
-		if (depth < 99)
+		if(depth == 0) 	cout << "Building BVH tree" << endl;
+
+		if (depth < 30 && numberOfTris() > 5)
 		{
+			if (depth < 4) cout << string(depth, ' ') << "depth " << depth << endl;
+
+			//find best split axis and position
 			int bestSplitAxis;
 			double bestSplitPos;
 
@@ -148,12 +152,13 @@ public:
 
 			bool dosplit = false;
 
-			double stepsize = 0.05;
+			//double stepsize = 1.0 / sqrt(numberOfTris());
+			double stepsize = 0.1;
 			for (double splitpos = stepsize; splitpos < 1.0; splitpos += stepsize)
 			{
 				for (int axis = 0; axis < 3; axis++)
 				{
-					splitCost = calculateSplitCost(splitpos, axis) * 1.2;
+					splitCost = calculateSplitCost(splitpos, axis);
 
 					if (splitCost < bestSplitCost)
 					{
@@ -165,9 +170,9 @@ public:
 				}
 			}
 
+			//do split
 			if (dosplit)
 			{
-				cout << "building depth " << depth << endl;
 				split(bestSplitPos, bestSplitAxis);
 				child1->buildBboxHierarchy(depth + 1);
 				child2->buildBboxHierarchy(depth + 1);
@@ -177,42 +182,49 @@ public:
 
 	bool intersect(Ray& ray, Tri*& closestTri, double& shortestDist, int depth = 0)
 	{
-		//intersect all tris first
-		double dist;
 		bool intersection = false;
-		for (vector<Tri*>::iterator t = tris.begin(); t != tris.end(); t++)
+
+
+		//intersect all tris first
+		if (numberOfTris() > 0)
 		{
-			if ((**t).intersect(ray, dist))
+			double dist;
+			for (vector<Tri*>::iterator t = tris.begin(); t != tris.end(); t++)
 			{
-				if (dist < shortestDist)
+				if ((**t).intersect(ray, dist))
 				{
-					closestTri = *t;
-					shortestDist = dist;
-					intersection = true;
+					if (dist < shortestDist)
+					{
+						intersection = true;
+						closestTri = *t;
+						shortestDist = dist;
+					}
 				}
 			}
 		}
 
 		double bboxDist;
 
-		if(child1 && child1->boundingBox.intersect(ray, bboxDist))
-			intersection = intersection || child1->intersect(ray, closestTri, shortestDist, depth + 1);
-		
-		if(child2 && child2->boundingBox.intersect(ray, bboxDist))
-			intersection = intersection || child2->intersect(ray, closestTri, shortestDist, depth + 1);
+		if (child1 && child1->boundingBox.intersect(ray, bboxDist))
+			intersection = child1->intersect(ray, closestTri, shortestDist, depth + 1) || intersection;
+
+		if (child2 && child2->boundingBox.intersect(ray, bboxDist))
+			intersection = child2->intersect(ray, closestTri, shortestDist, depth + 1) || intersection;
 
 		return intersection;
 	}
 
-	int numberOfTris()
+	int numberOfTris(bool recurse = false)
 	{
 		int numTris = tris.size();
+		if (recurse)
+		{
+			if (child1)
+				numTris += child1->numberOfTris(true);
 
-		if (child1)
-			numTris += child1->numberOfTris();
-
-		if (child2)
-			numTris += child2->numberOfTris();
+			if (child2)
+				numTris += child2->numberOfTris(true);
+		}
 
 		return numTris;
 	}
@@ -224,13 +236,19 @@ public:
 		cout << endl << string(depth * 3, ' ');
 		boundingBox.maxCoord.printToConsole();
 
+		cout << endl << string(depth * 3, ' ');
+		cout << numberOfTris();
+
 		cout << endl;
 
-		child1->printToConsole(depth + 1);
-		child2->printToConsole(depth + 1);
+		if (child1)
+			child1->printToConsole(depth + 1);
+
+		if (child2)
+			child2->printToConsole(depth + 1);
 
 		//if (depth == 0)
-			cout << numberOfTris() << " total tris" << endl;
+		//	cout << numberOfTris() << " total tris" << endl;
 
 	}
 

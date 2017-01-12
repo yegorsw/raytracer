@@ -109,8 +109,6 @@ public:
 		Vec pvec = ray.dir.cross(edge02);
 		double det = edge01.dot(pvec);
 		
-		g_triIntersections++;
-
 		//if ray is parallel with triangle
 		if (det < 0.000001 && det > -0.000001)// uncomment to disable backface culling
 			return false;
@@ -136,8 +134,8 @@ public:
 		if (b2 < 0 || b1 + b2 > 1)
 			return false;
 
-	    dist = edge02.dot(qvec) * invDet;
-
+		dist = edge02.dot(qvec) * invDet;
+		
 		return dist > 0.0;
 	}
 

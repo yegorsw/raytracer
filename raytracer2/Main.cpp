@@ -14,44 +14,7 @@
 #include "IOfunctions.h"
 #include "globals.h"
 
-////SCENE SETUP//// - 25.5 seconds
-const int IMG_W = 600;
-const int IMG_H = 600;
-
-const double SCN_MAXDIST = 5000;
-const double SCN_RAYBIAS = 0.001;
-const int SCN_MAXDEPTH = 1;
-
-const int SHD_MAXSAMPLES = 4;
-
-const int SAMP_MINSAMPLES = 4;
-const int SAMP_MAXSAMPLES = 512;
-const double SAMP_MAXVARIANCE = 1;
-
-const int NUM_THREADS = 4;
-////END OF SCENE SETUP////
-
-unsigned int g_triIntersections = 0;
-unsigned int g_bboxIntersections = 0;
-
-const double invRandMax = (1.0 / (double)RAND_MAX);
-
 using namespace std;
-
-double length(double a, double b)
-{
-	return sqrt(a * a + b * b);
-}
-
-double randf()
-{
-	return rand() * invRandMax;
-}
-
-double randfneg()
-{
-	return (rand() * invRandMax * 2.0) - 1.0;
-}
 
 Pixel renderPixel(Ray& ray, Scene& scene, int depth = 0)
 {
@@ -64,7 +27,7 @@ Pixel renderPixel(Ray& ray, Scene& scene, int depth = 0)
 	intersected = scene.intersect(ray, closestTri, shortestDist);
 	
 #ifdef DEBUG_OUTPUTDIST
-	return Pixel(shortestDist, shortestDist, shortestDist, 1);
+	return Pixel(Color(shortestDist/SCN_MAXDIST), 1);
 #endif
 
 #ifdef DEBUG_OUTPUTNORMALS
@@ -131,7 +94,7 @@ void renderThread(Scene& scene, Screen& screen, int screenx, int screeny)
 	int sl = 0;
 	double samples;
 	double s = 1;
-	Pixel samplePixel, outPixel, variance;
+	Pixel samplePixel, outPixel, prevPixel;
 
 	Ray primaryRay;
 
@@ -139,38 +102,35 @@ void renderThread(Scene& scene, Screen& screen, int screenx, int screeny)
 
 	double dirx, diry;
 
-	while (varianceCombo > SAMP_MINSAMPLES && sl < SAMP_MAXSAMPLES)
+	while (varianceCombo < SAMP_MINSAMPLES && s <= SAMP_MAXSAMPLES)
 	{
-		samples = pow(2, sl);
-		for (double x = 0; x < samples; x++)
-		{
-			for (double y = 0; y < samples; y++)
-			{
-				dirx = ((x + randfneg() - IMG_W * 0.5) / (double)IMG_H) * 2;
-				diry = ((y + randfneg() - IMG_H * 0.5) / (double)IMG_H) * -2;
-				primaryRay.setDir(dirx, diry, -2);
-				primaryRay.dir.normalize();
+		
+		dirx = ((screenx + randfneg() * 0.5 * (SAMP_MAXSAMPLES>1 ? 1 : 0) - 0.5 - IMG_W * 0.5) / (double)IMG_H) * 2;
+		diry = ((screeny + randfneg() * 0.5 * (SAMP_MAXSAMPLES>1 ? 1 : 0) - 0.5 - IMG_H * 0.5) / (double)IMG_H) * -2;
+		primaryRay.setDir(dirx, diry, -4);
+		primaryRay.dir.normalize();
 
-				variance = outPixel;
-				samplePixel = renderPixel(primaryRay, scene);
+		prevPixel = outPixel;
+		samplePixel = renderPixel(primaryRay, scene);
 
-				outPixel *= (s - 1.0) / s;
+		samplePixel.color *= 2.0;
+		samplePixel.color.clamp(1.0);
+		samplePixel.color.applyGamma(2.2);
 
-				samplePixel /= s;
+		outPixel *= (s - 1.0) / s;
 
-				outPixel += samplePixel;
+		samplePixel /= s;
 
-				variance -= outPixel;
+		outPixel += samplePixel;
 
-				s++;
+		prevPixel -= outPixel;
 
-				if (variance.magnitude() < SAMP_MAXVARIANCE)
-					varianceCombo++;
-				else
-					varianceCombo = 0;
-			}
-		}
-		sl++;
+		s++;
+
+		if (pow(prevPixel.magnitude(), 2) < SAMP_MAXVARIANCE)
+			varianceCombo++;
+		else
+			varianceCombo = 0;
 	}
 	screen.setPixel(screenx, screeny, outPixel);
 }
@@ -179,31 +139,45 @@ int main()
 {
 	srand(12345);
 
-	string objfile = "lampglow";
+	string objfile = "angel";
 	string rootdir = "C:/Users/Yegor-s/Desktop/raytracer/";
+	/*
+	Scene myScene;
+	Tri* t = new Tri(Vec(1, 1, -15), Vec(-1, 0.5, -15), Vec(-1.2, 0, -15));
+	t->precompute();
+	myScene.child1 = new GeoContainer;
+	myScene.child1->child2 = new GeoContainer;
+	myScene.child1->child2->child1 = new GeoContainer;
+	myScene.child1->child2->child2 = new GeoContainer;
+	myScene.child1->child2->child1->addTri(t);
+	myScene.child1->child2->child2->addTri(t);
+	myScene.child1->child2->child1->generateBbox();
+	myScene.boundingBox = myScene.child1->child2->child1->boundingBox;
+	*/
+
 	Scene myScene = readObj(rootdir + "objects/" + objfile + ".obj");
-//	myScene.skyColor.Ka = { 0.1, 0.2, 0.4 };
-	cout << myScene.numberOfTris() << " triangles in scene" << endl;
-	cout << "Building BVH tree" << endl;
+
+
+//	myScene.skyColor.Ka = { 1.2, 1.4, 2.8 };
+//	myScene.skyColor.Ka *= 0.5;
+	cout << myScene.numberOfTris(true) << " triangles in scene" << endl;
 	myScene.buildBboxHierarchy();
+//	myScene.split(0.5, 2);
+
+	cout << myScene.numberOfTris(true) << " triangles in scene" << endl;
+
 //	myScene.findEmptyChildren();
 
-	Screen myScreen(IMG_W, IMG_H);
-	Ray primaryRay;
-	primaryRay.setPos(0, 0, 0);
+//	myScene.printToConsole();
 
-	double sx, sy, rx, ry;
+	Screen myScreen(IMG_W, IMG_H);
 	
 	cout << endl << "Rendering.. " << endl;
 
-	Pixel currentPixel;
-	Pixel renderedPixel;
-
-	Pixel variance;
-	int varianceCombo = 0;
-
 	clock_t begin = clock();
 	clock_t percent = clock();
+
+	//thread threads[NUM_THREADS];
 
 	//for each row
 	for (int y = 0; y < IMG_H; y++ )
@@ -217,61 +191,14 @@ int main()
 		}
 
 		//for each pixel
-		for (int x = 0; x < IMG_W; x++ )
+		for (int x = 0; x < IMG_W; x += NUM_THREADS )
 		{
-			varianceCombo = 0;
-			//for each sample
-			double s = 1.0;
-			while (varianceCombo < SAMP_MINSAMPLES && s <= SAMP_MAXSAMPLES)
-			{
-				rx = randfneg()*0.5;
-				ry = randfneg()*0.5;
-//				rx = rx * rx * sign(rx) * 0.5;
-//				rx = ry * ry * sign(ry) * 0.5;
+			for (int t = 0; t < NUM_THREADS && t + x < IMG_W; t++)
+				renderThread(myScene, myScreen, x + t, y);
+			//	threads[t] = thread(renderThread, myScene, myScreen, x + t, y);
 
-				sx = ((x + rx - IMG_W * 0.5) / (double)IMG_H) * 2;
-				sy = ((y + ry - IMG_H * 0.5) / (double)IMG_H) * -2;
-
-				primaryRay.setDir(sx* 0.6, sy*0.6, -1.0);
-				primaryRay.dir.normalize();
-
-				variance = currentPixel;
-
-				renderedPixel = renderPixel(primaryRay, myScene);
-				renderedPixel.color.clamp();
-				renderedPixel *= 1.0 / s;
-
-				currentPixel.color.clamp();
-				currentPixel *= (s - 1.0) / s;
-				currentPixel += renderedPixel;
-
-				variance -= currentPixel;
-
-				if (variance.magnitude() < SAMP_MAXVARIANCE)
-					varianceCombo++;
-				else
-					varianceCombo = 0;
-
-
-
-				s++;
-			}//end for each sample
-			
-
-#ifdef DEBUG_OUTPUTSAMPLES
-			double samplesUsed = s / (double)SAMP_MAXSAMPLES;
-			currentPixel.setColor(samplesUsed, samplesUsed, samplesUsed);
-			currentPixel.setAlpha(1);
-#endif
-
-#ifdef DEBUG_OUTPUTINTERSECTIONS
-			currentPixel.setColor(g_triIntersections, g_bboxIntersections, currentPixel.a);
-
-			currentPixel.setAlpha(1);
-			g_triIntersections = 0;
-			g_bboxIntersections = 0;
-#endif
-			myScreen.setPixel(x, y, currentPixel);
+			//for (int t = 0; t < NUM_THREADS && t + x < IMG_W; t++)
+			//	threads[t].join();
 
 			//crtl+d early exit & dump pixels
 			if (_kbhit() && _getch() == 4)
@@ -286,11 +213,11 @@ int main()
 	//crtl+d early exit & dump pixels goto point
 	end_dump:
 	
+
+
 	clock_t end = clock();
 	double rendertime = double(end - begin) / CLOCKS_PER_SEC;
 	cout << endl << "Render time: " << rendertime<< endl;
-	cout << g_triIntersections << " triangle intersections tested." << endl;
-	cout << g_bboxIntersections << " box intersections tested." << endl;
 	//myScreen.invertRGB();
 	//myScreen.constantAlpha();
 
@@ -301,7 +228,6 @@ int main()
 	myScreen.normalizeValues();
 #endif
 
-	myScreen.applyGamma(2.2);
 	writePPM(myScreen, rootdir + objfile + ".ppm", "rgba");
 	//myScene.printToConsole();
 }
