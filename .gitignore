@@ -53,6 +53,8 @@ ipch/
 *.opensdf
 *.sdf
 *.cachefile
+*.db
+*.opendb
 
 # Visual Studio profiler
 *.psess
@@ -154,3 +156,5 @@ $RECYCLE.BIN/
 
 # Mac desktop service store files
 .DS_Store
+
+*.db
