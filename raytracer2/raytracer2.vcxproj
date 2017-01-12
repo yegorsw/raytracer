@@ -27,11 +27,16 @@
     <ClInclude Include="Ray.h" />
     <ClInclude Include="Screen.h" />
     <ClInclude Include="Tri.h" />
+    <ClInclude Include="ymath.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="example.cpp" />
     <ClCompile Include="IOfunctions.cpp" />
     <ClCompile Include="Main.cpp" />
+    <ClCompile Include="ymath.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="ClassDiagram.cd" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{D599AFE6-EEB4-41B9-A7F6-7AEF185A88CD}</ProjectGuid>

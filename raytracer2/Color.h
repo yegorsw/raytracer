@@ -19,6 +19,13 @@ public:
 		b = bIn;
 	}
 
+	Color(double v)
+	{
+		r = v;
+		g = v;
+		b = v;
+	}
+
 	void operator*=(double n)
 	{
 		r *= n;
@@ -47,11 +54,11 @@ public:
 		g = pow(g, gamma);
 		b = pow(b, gamma);
 	}
-	void clamp()
+	void clamp(double maximum)
 	{
-		r = r<1.0 ? (r>0.0 ? r : 0.0) : 1.0;
-		g = g<1.0 ? (g>0.0 ? g : 0.0) : 1.0;
-		b = b<1.0 ? (b>0.0 ? b : 0.0) : 1.0;
+		r = r<maximum ? (r>0.0 ? r : 0.0) : maximum;
+		g = g<maximum ? (g>0.0 ? g : 0.0) : maximum;
+		b = b<maximum ? (b>0.0 ? b : 0.0) : maximum;
 	}
 	~Color()
 	{

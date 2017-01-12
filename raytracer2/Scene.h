@@ -2,6 +2,7 @@
 
 #include "MtlLib.h"
 #include "GeoContainer.h"
+#include "globals.h"
 
 class Scene: public GeoContainer
 {
@@ -28,8 +29,9 @@ public:
 	bool intersect(Ray& ray, Tri*& closestTri, double& shortestDist, int depth = 0)
 	{
 		double _dummy;
+
 		if (boundingBox.intersect(ray, _dummy))
-			return GeoContainer::intersect(ray, closestTri, shortestDist, depth = 0);
+			return GeoContainer::intersect(ray, closestTri, shortestDist, depth);
 		else
 			return false;
 	}

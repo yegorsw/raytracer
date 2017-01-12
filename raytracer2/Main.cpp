@@ -4,74 +4,36 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctime>
+#include <thread>
 
 #include "Ray.h"
 #include "Screen.h"
 #include "Scene.h"
+#include "Pixel.h"
 
 #include "IOfunctions.h"
 #include "globals.h"
 
-////SCENE SETUP//// - 25.5 seconds
-const int IMG_W = 300;
-const int IMG_H = 300;
-
-const double SCN_MAXDIST = 5000;
-const double SCN_MAXRAYDIST = 5000;
-const double SCN_RAYBIAS = 0.01;
-const int SCN_MAXDEPTH = 1;
-
-const int SHD_MAXSAMPLES = 4;
-
-const int SAMP_MINSAMPLES = 10;
-const int SAMP_MAXSAMPLES = 100;
-const double SAMP_MINVARIANCE = 0.001;
-////END OF SCENE SETUP////
-
-unsigned int g_triIntersections = 0;
-unsigned int g_bboxIntersections = 0;
-
-const double invRandMax = (1.0 / (double)RAND_MAX);
-
 using namespace std;
-
-int sign(double n)
-{
-	return n >= 0 ? 1 : -1;
-}
-
-double length(double a, double b)
-{
-	return sqrt(a * a + b * b);
-}
-
-double randf()
-{
-	return rand() * invRandMax;
-}
-
-double randfneg()
-{
-	return (rand() * invRandMax * 2.0) - 1.0;
-}
 
 Pixel renderPixel(Ray& ray, Scene& scene, int depth = 0)
 {
 	double intersectDist;
-	double shortestDist;
-
-	if (depth > 0)
-		shortestDist = SCN_MAXDIST;
-	else
-		shortestDist = SCN_MAXRAYDIST;
+	double shortestDist = SCN_MAXDIST;
 	
 	Tri* closestTri;
 	bool intersected;
 
 	intersected = scene.intersect(ray, closestTri, shortestDist);
-
+	
 #ifdef DEBUG_OUTPUTDIST
-	return Pixel(shortestDist, shortestDist, shortestDist, 1);
+	return Pixel(Color(shortestDist/SCN_MAXDIST), 1);
+#endif
+
+#ifdef DEBUG_OUTPUTNORMALS
+	if (intersected)
+		return Pixel(closestTri->n.p[0], closestTri->n.p[1], closestTri->n.p[2], 1);
+	return Pixel(0, 0, 0, 0);
 #endif
 
 #ifdef DEBUG_OUTPUTALPHA
@@ -83,82 +45,139 @@ Pixel renderPixel(Ray& ray, Scene& scene, int depth = 0)
 
 #ifdef DEBUG_OUTPUTPOS
 	Vec temppos = ray.p + (ray.dir * shortestDist);
-	return Pixel(abs(temppos.x*0.1), abs(temppos.y*0.1), abs(temppos.z*0.1), 1);
+	return Pixel(abs(temppos[0]*0.1), abs(temppos[1]*0.1), abs(temppos[2]*0.1), 1);
 #endif
 
 	if (intersected){
 		if (depth < SCN_MAXDEPTH && closestTri->mtl->hasDiffuse())
 		{
-			if (shortestDist < SCN_MAXDIST)
+			Pixel outPixel;
+			Pixel nextBounce;
+			Ray indirectRay;
+			indirectRay.setPos(ray.pos + (ray.dir * shortestDist) + (closestTri->n * SCN_RAYBIAS));
+
+			int numsamples = max(SHD_MAXSAMPLES / (depth + 1), 1);
+			for (int i = 0; i < numsamples; i++)
 			{
-				Pixel outPixel;
-				Ray indirectRay;
-				indirectRay.setPos(ray.p + (ray.dir * shortestDist) + (closestTri->n * SCN_RAYBIAS));
+				do indirectRay.setDir(randfneg(), randfneg(), randfneg());
+				while (indirectRay.dir.dot(indirectRay.dir) > 1.0);
 
-				for (int i = 0; i < max(SHD_MAXSAMPLES/(depth+1), 1); i++)
-				{
-					indirectRay.setDir(randfneg(), randfneg(), randfneg());
-					indirectRay.dir.normalize();
+				indirectRay.dir.normalize();
 
-					if (indirectRay.dir.dot((*closestTri).n) < 0.0)
-						indirectRay.dir = -indirectRay.dir;
-					
-					Pixel nextBounce = renderPixel(indirectRay, scene, depth + 1);
-
-					nextBounce.color *= closestTri->mtl->Kd;
-					nextBounce.color += closestTri->mtl->Ka;
-					
-					outPixel.color += nextBounce.color;
-				}
-				outPixel /= SHD_MAXSAMPLES;
-				outPixel.a = 1.0;
-				return outPixel;
+				if (indirectRay.dir.dot(closestTri->n) < 0.0)
+					indirectRay.dir = -indirectRay.dir;
+						
+				nextBounce = renderPixel(indirectRay, scene, depth + 1);
+				nextBounce.color *= closestTri->mtl->Kd;
+				nextBounce.color *= indirectRay.dir.dot(closestTri->n);
+				nextBounce.color += closestTri->mtl->Ka;
+				
+				outPixel.color += nextBounce.color;
 			}
+			outPixel /= numsamples;
+			outPixel.a = 1.0;
+			return outPixel;
 		}
 		else//if depth == SCN_MAXDEPTH (last bounce)
 		{
-			if (shortestDist < SCN_MAXDIST)
-			{
-				return Pixel(closestTri->mtl->Ka, 1);
-			}
+			return Pixel(closestTri->mtl->Ka, 1);
 		}
 	}
+	else//!intersected, return sky color
+	{
+		return Pixel(scene.skyColor.Ka, 0);
+	}
+}
 
-	//no intersection, return sky color
-	return Pixel(scene.skyColor.Ka, 0);
+void renderThread(Scene& scene, Screen& screen, int screenx, int screeny)
+{
+	int sl = 0;
+	double samples;
+	double s = 1;
+	Pixel samplePixel, outPixel, prevPixel;
+
+	Ray primaryRay;
+
+	int varianceCombo = 0;
+
+	double dirx, diry;
+
+	while (varianceCombo < SAMP_MINSAMPLES && s <= SAMP_MAXSAMPLES)
+	{
+		
+		dirx = ((screenx + randfneg() * 0.5 * (SAMP_MAXSAMPLES>1 ? 1 : 0) - 0.5 - IMG_W * 0.5) / (double)IMG_H) * 2;
+		diry = ((screeny + randfneg() * 0.5 * (SAMP_MAXSAMPLES>1 ? 1 : 0) - 0.5 - IMG_H * 0.5) / (double)IMG_H) * -2;
+		primaryRay.setDir(dirx, diry, -4);
+		primaryRay.dir.normalize();
+
+		prevPixel = outPixel;
+		samplePixel = renderPixel(primaryRay, scene);
+
+		samplePixel.color *= 2.0;
+		samplePixel.color.clamp(1.0);
+		samplePixel.color.applyGamma(2.2);
+
+		outPixel *= (s - 1.0) / s;
+
+		samplePixel /= s;
+
+		outPixel += samplePixel;
+
+		prevPixel -= outPixel;
+
+		s++;
+
+		if (pow(prevPixel.magnitude(), 2) < SAMP_MAXVARIANCE)
+			varianceCombo++;
+		else
+			varianceCombo = 0;
+	}
+	screen.setPixel(screenx, screeny, outPixel);
 }
 
 int main()
 {
 	srand(12345);
 
-	string objfile = "simpleboxesshaded";
+	string objfile = "angel";
 	string rootdir = "C:/Users/Yegor-s/Desktop/raytracer/";
-	Scene myScene = readObj(rootdir + "objects/" + objfile + ".obj");
-	myScene.skyColor.Ka = { 0.2, 0.7, 1.0 };
-	cout << myScene.numberOfTris() << " triangles in scene" << endl;
-	myScene.mlib->printToConsole();
+	/*
+	Scene myScene;
+	Tri* t = new Tri(Vec(1, 1, -15), Vec(-1, 0.5, -15), Vec(-1.2, 0, -15));
+	t->precompute();
+	myScene.child1 = new GeoContainer;
+	myScene.child1->child2 = new GeoContainer;
+	myScene.child1->child2->child1 = new GeoContainer;
+	myScene.child1->child2->child2 = new GeoContainer;
+	myScene.child1->child2->child1->addTri(t);
+	myScene.child1->child2->child2->addTri(t);
+	myScene.child1->child2->child1->generateBbox();
+	myScene.boundingBox = myScene.child1->child2->child1->boundingBox;
+	*/
 
-//	myScene.buildBboxHierarchy();
+	Scene myScene = readObj(rootdir + "objects/" + objfile + ".obj");
+
+
+//	myScene.skyColor.Ka = { 1.2, 1.4, 2.8 };
+//	myScene.skyColor.Ka *= 0.5;
+	cout << myScene.numberOfTris(true) << " triangles in scene" << endl;
+	myScene.buildBboxHierarchy();
+//	myScene.split(0.5, 2);
+
+	cout << myScene.numberOfTris(true) << " triangles in scene" << endl;
+
 //	myScene.findEmptyChildren();
 
-	Screen myScreen(IMG_W, IMG_H);
-	Ray primaryRay;
-	Vec dir;
-	primaryRay.setPos(0, 0, 0);
+//	myScene.printToConsole();
 
-	double sx, sy, rx, ry;
+	Screen myScreen(IMG_W, IMG_H);
 	
 	cout << endl << "Rendering.. " << endl;
 
-	Pixel currentPixel;
-	Pixel renderedPixel;
-
-	Pixel variance;
-	int varianceCombo = 0;
-
 	clock_t begin = clock();
 	clock_t percent = clock();
+
+	//thread threads[NUM_THREADS];
 
 	//for each row
 	for (int y = 0; y < IMG_H; y++ )
@@ -172,61 +191,14 @@ int main()
 		}
 
 		//for each pixel
-		for (int x = 0; x < IMG_W; x++ )
+		for (int x = 0; x < IMG_W; x += NUM_THREADS )
 		{
-			varianceCombo = 0;
-			//for each sample
-			double s = 1.0;
-			while (varianceCombo < SAMP_MINSAMPLES && s <= SAMP_MAXSAMPLES)
-			{
-				rx = randfneg();
-				ry = randfneg();
-//				rx = rx * rx * sign(rx) * 0.5;
-//				rx = ry * ry * sign(ry) * 0.5;
+			for (int t = 0; t < NUM_THREADS && t + x < IMG_W; t++)
+				renderThread(myScene, myScreen, x + t, y);
+			//	threads[t] = thread(renderThread, myScene, myScreen, x + t, y);
 
-				sx = ((x + rx - IMG_W * 0.5) / (double)IMG_H) * 2;
-				sy = ((y + ry - IMG_H * 0.5) / (double)IMG_H) * -2;
-
-				primaryRay.setDir(sx* 0.6, sy*0.6, -1.0);
-				primaryRay.dir.normalize();
-
-				variance = currentPixel;
-
-				renderedPixel = renderPixel(primaryRay, myScene);
-				renderedPixel.color.clamp();
-				renderedPixel *= 1.0 / s;
-
-				currentPixel.color.clamp();
-				currentPixel *= (s - 1.0) / s;
-				currentPixel += renderedPixel;
-
-				variance -= currentPixel;
-
-				if (variance.magnitude() < SAMP_MINVARIANCE)
-					varianceCombo++;
-				else
-					varianceCombo = 0;
-
-
-
-				s++;
-			}//end for each sample
-			
-
-#ifdef DEBUG_OUTPUTSAMPLES
-			double samplesUsed = s / (double)SAMP_MAXSAMPLES;
-			currentPixel.setColor(samplesUsed, samplesUsed, samplesUsed);
-			currentPixel.setAlpha(1);
-#endif
-
-#ifdef DEBUG_OUTPUTINTERSECTIONS
-			currentPixel.setColor(g_triIntersections, g_bboxIntersections, currentPixel.a);
-
-			currentPixel.setAlpha(1);
-			g_triIntersections = 0;
-			g_bboxIntersections = 0;
-#endif
-			myScreen.setPixel(x, y, currentPixel);
+			//for (int t = 0; t < NUM_THREADS && t + x < IMG_W; t++)
+			//	threads[t].join();
 
 			//crtl+d early exit & dump pixels
 			if (_kbhit() && _getch() == 4)
@@ -241,11 +213,11 @@ int main()
 	//crtl+d early exit & dump pixels goto point
 	end_dump:
 	
+
+
 	clock_t end = clock();
 	double rendertime = double(end - begin) / CLOCKS_PER_SEC;
 	cout << endl << "Render time: " << rendertime<< endl;
-	cout << g_triIntersections << " triangle intersections tested." << endl;
-	cout << g_bboxIntersections << " box intersections tested." << endl;
 	//myScreen.invertRGB();
 	//myScreen.constantAlpha();
 
@@ -256,7 +228,6 @@ int main()
 	myScreen.normalizeValues();
 #endif
 
-	myScreen.applyGamma(2.2);
 	writePPM(myScreen, rootdir + objfile + ".ppm", "rgba");
 	//myScene.printToConsole();
 }

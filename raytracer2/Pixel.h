@@ -1,5 +1,9 @@
 #pragma once
 #include "Color.h"
+#include <iostream>
+#include <algorithm>
+
+using namespace std;
 
 class Pixel
 {
@@ -94,10 +98,7 @@ public:
 
 	bool isBlack()
 	{
-		if (color.r == 0.0 && color.g == 0.0 && color.b == 0.0 && a == 0.0)
-			return true;
-		else
-			return false;
+		return (color.r == 0.0 && color.g == 0.0 && color.b == 0.0 && a == 0.0);
 	}
 
 	double magnitude()

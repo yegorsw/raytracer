@@ -3,17 +3,16 @@
 #include "Tri.h"
 #include "BBox.h"
 #include "globals.h"
+#include "ymath.h"
 
 class GeoContainer
 {
 public:
 	BBox boundingBox;
-	//vector<Mesh*> meshes;
 	vector<Tri*> tris;
 	GeoContainer* child1;
 	GeoContainer* child2;
 	GeoContainer* parent;
-	bool hasChildren = false;
 
 	GeoContainer()
 	{
@@ -26,17 +25,14 @@ public:
 
 	void generateBbox(bool shrinkWrap = false)
 	{
-		if (!shrinkWrap)
-		{
-		}
 
-		double minX = tris[0]->p0.x;
-		double minY = tris[0]->p0.y;
-		double minZ = tris[0]->p0.z;
+		double minX = tris[0]->p0.p[0];
+		double minY = tris[0]->p0.p[1];
+		double minZ = tris[0]->p0.p[2];
 
-		double maxX = tris[0]->p0.x;
-		double maxY = tris[0]->p0.y;
-		double maxZ = tris[0]->p0.z;
+		double maxX = tris[0]->p0.p[0];
+		double maxY = tris[0]->p0.p[1];
+		double maxZ = tris[0]->p0.p[2];
 
 		for (int i = 0; i < tris.size(); i++)
 		{
@@ -51,13 +47,13 @@ public:
 
 		if (shrinkWrap)
 		{
-			minX = max(minX, boundingBox.minCoord.x);
-			minY = max(minY, boundingBox.minCoord.y);
-			minZ = max(minZ, boundingBox.minCoord.z);
+			minX = max(minX, boundingBox.minCoord.p[0]);
+			minY = max(minY, boundingBox.minCoord.p[1]);
+			minZ = max(minZ, boundingBox.minCoord.p[2]);
 
-			maxX = min(maxX, boundingBox.maxCoord.x);
-			maxY = min(maxY, boundingBox.maxCoord.y);
-			maxZ = min(maxZ, boundingBox.maxCoord.z);
+			maxX = min(maxX, boundingBox.maxCoord.p[0]);
+			maxY = min(maxY, boundingBox.maxCoord.p[1]);
+			maxZ = min(maxZ, boundingBox.maxCoord.p[2]);
 
 			boundingBox.minCoord = Vec(minX, minY, minZ);
 			boundingBox.maxCoord = Vec(maxX, maxY, maxZ);
@@ -65,182 +61,170 @@ public:
 		else {
 			boundingBox = BBox(Vec(minX, minY, minZ), Vec(maxX, maxY, maxZ));
 		}
-
-
-		if (child1)
-			boundingBox = boundingBox.merged(child1->boundingBox);
-
-		if (child2)
-			boundingBox = boundingBox.merged(child2->boundingBox);
 	}
 
-	Vec center()
+	double cost()
 	{
-		Vec mid;
-		mid += child1->boundingBox.center();
-		mid += child2->boundingBox.center();
-		mid = mid / 2.0;
-
-		return mid;
+		return boundingBox.area() * numberOfTris() * 0.0001;
 	}
 
-	double calculateSplitCost(double splitPos, char splitAxis)
+	double calculateSplitCost(double splitPos, int axis)
 	{
-		return 0;
+		double splitCost;
+		GeoContainer dummy1, dummy2;
+
+		double splitPosWorldSpace;
+		splitPosWorldSpace = lerp(boundingBox.minCoord.p[axis], boundingBox.maxCoord.p[axis], splitPos);
+
+		for (vector<Tri*>::iterator t = tris.begin(); t != tris.end(); t++)
+		{
+			if ((**t).p0.p[axis] < splitPosWorldSpace || (**t).p1.p[axis] < splitPosWorldSpace || (**t).p2.p[axis] < splitPosWorldSpace)
+				dummy1.addTri(*t);
+
+			if ((**t).p0.p[axis] > splitPosWorldSpace || (**t).p1.p[axis] > splitPosWorldSpace || (**t).p2.p[axis] > splitPosWorldSpace)
+				dummy2.addTri(*t);
+		}
+		
+		dummy1.boundingBox = boundingBox;
+		dummy1.boundingBox.maxCoord.p[axis] = splitPosWorldSpace;
+
+		dummy2.boundingBox = boundingBox;
+		dummy2.boundingBox.minCoord.p[axis] = splitPosWorldSpace;
+
+		if (dummy1.numberOfTris() == 0 || dummy2.numberOfTris() == 0)
+			return cost() + 1.0;
+
+		dummy1.generateBbox(true);
+		dummy2.generateBbox(true);
+
+		return dummy1.cost() + dummy2.cost();
 	}
 
-	void split(double splitPos, char splitAxis)
+	void split(double splitPos, int axis)
 	{
 		child1 = new GeoContainer();
 		child2 = new GeoContainer();
-		if (splitAxis == 'x')
-		{
-			double splitPosWorldSpace = (boundingBox.minCoord * (1.0 - splitPos) + boundingBox.maxCoord * (splitPos)).x;
 
+		double splitPosWorldSpace;
+		splitPosWorldSpace = lerp(boundingBox.minCoord.p[axis], boundingBox.maxCoord.p[axis], splitPos);
+
+		child1->boundingBox = boundingBox;
+		child1->boundingBox.maxCoord.p[axis] = splitPosWorldSpace;
+
+		child2->boundingBox = boundingBox;
+		child2->boundingBox.minCoord.p[axis] = splitPosWorldSpace;
+
+		for (vector<Tri*>::iterator t = tris.begin(); t != tris.end(); t++)
+		{
+			if ((**t).p0.p[axis] < splitPosWorldSpace || (**t).p1.p[axis] < splitPosWorldSpace || (**t).p2.p[axis] < splitPosWorldSpace)
+			{
+				child1->addTri(*t);
+			}
+			if ((**t).p0.p[axis] >= splitPosWorldSpace || (**t).p1.p[axis] >= splitPosWorldSpace || (**t).p2.p[axis] >= splitPosWorldSpace)
+			{
+				child2->addTri(*t);
+			}
 		}
+		
+		tris = vector<Tri*>();
+
+		if (child1->numberOfTris() > 0)
+			child1->generateBbox(true);
+
+		if (child2->numberOfTris() > 0)
+			child2->generateBbox(true);
 	}
 
 	void buildBboxHierarchy(int depth = 0)
 	{
+		if(depth == 0) 	cout << "Building BVH tree" << endl;
 
-	}
-
-	/*
-	buildbboxhierarchy:...
-		bestcost = 9999
-		stepsize = 0.1
-		
-		for i = stepsize; i < 1; i++
-			getCost(
-	*/
-	
-	/*void buildBboxHierarchy(int depth=0)
-	{
-		generateBbox();
-
-		if (numberOfMeshes() > 3 && depth < 8)
+		if (depth < 30 && numberOfTris() > 5)
 		{
+			if (depth < 4) cout << string(depth, ' ') << "depth " << depth << endl;
 
-			if (depth < 30)
-				cout << string(depth*2, ' ') << "Sorting Depth " << depth << endl;
+			//find best split axis and position
+			int bestSplitAxis;
+			double bestSplitPos;
 
-			GeoContainer* child1 = new GeoContainer;
-			GeoContainer* child2 = new GeoContainer;
+			double bestSplitCost = cost();
+			double splitCost;
 
-			for (vector<Mesh*>::iterator m = meshes.begin(); m != meshes.end();)
+			bool dosplit = false;
+
+			//double stepsize = 1.0 / sqrt(numberOfTris());
+			double stepsize = 0.1;
+			for (double splitpos = stepsize; splitpos < 1.0; splitpos += stepsize)
 			{
-				if (boundingBox.largestAxis() == 0)
+				for (int axis = 0; axis < 3; axis++)
 				{
-					if ((**m).boundingBox.center().x <= center().x)
-						moveMeshToGroup(m, *child1);
-					else
-						moveMeshToGroup(m, *child2);
+					splitCost = calculateSplitCost(splitpos, axis);
+
+					if (splitCost < bestSplitCost)
+					{
+						bestSplitCost = splitCost;
+						bestSplitAxis = axis;
+						bestSplitPos = splitpos;
+						dosplit = true;
+					}
 				}
-				else if (boundingBox.largestAxis() == 1)
-				{
-					if ((**m).boundingBox.center().y <= center().y)
-						moveMeshToGroup(m, *child1);
-					else
-						moveMeshToGroup(m, *child2);
-				}
-				else if (boundingBox.largestAxis() == 2)
-				{
-					if ((**m).boundingBox.center().z <= center().z)
-						moveMeshToGroup(m, *child1);
-					else
-						moveMeshToGroup(m, *child2);
-				}
-				
 			}
 
-			(*child1).buildBboxHierarchy(depth + 1);
-			(*child2).buildBboxHierarchy(depth + 1);
-
-			containers.push_back(move(*child1));
-			containers.push_back(move(*child2));
-
-
-			(*child1).parent = this;
-			(*child2).parent = this;
-
-		}//end if num meshes > 2
-
-		
-		for (vector<Mesh>::iterator m = meshes.begin(); m != meshes.end(); m++)
-		{
-			(*m).buildBboxHierarchy();
+			//do split
+			if (dosplit)
+			{
+				split(bestSplitPos, bestSplitAxis);
+				child1->buildBboxHierarchy(depth + 1);
+				child2->buildBboxHierarchy(depth + 1);
+			}
 		}
-
-	}*/
+	}
 
 	bool intersect(Ray& ray, Tri*& closestTri, double& shortestDist, int depth = 0)
 	{
+		bool intersection = false;
+
+
 		//intersect all tris first
-		double dist;
-		for (vector<Tri*>::iterator t = tris.begin(); t != tris.end(); t++)
+		if (numberOfTris() > 0)
 		{
-			if ((**t).intersect(ray, dist))
+			double dist;
+			for (vector<Tri*>::iterator t = tris.begin(); t != tris.end(); t++)
 			{
-				if (dist < shortestDist)
+				if ((**t).intersect(ray, dist))
 				{
-					closestTri = *t;
-					shortestDist = dist;
+					if (dist < shortestDist)
+					{
+						intersection = true;
+						closestTri = *t;
+						shortestDist = dist;
+					}
 				}
 			}
 		}
 
-		//if has children, intersect them
-		if (hasChildren)
-		{
-			double dist1, dist2;
-			bool hit1 = child1->boundingBox.intersect(ray, dist1);
-			bool hit2 = child2->boundingBox.intersect(ray, dist2);
-			
-			//if ray passes through both bounding boxes
-			if (hit1 && hit2)
-			{
-				//intersect closer child first
-				if (dist1 < dist2)
-				{
-					if (dist1 < shortestDist)
-						child1->intersect(ray, closestTri, shortestDist, depth + 1);
+		double bboxDist;
 
-					if (dist2 < shortestDist)
-						child2->intersect(ray, closestTri, shortestDist, depth + 1);
-				}
-				else
-				{
-					if (dist2 < shortestDist)
-						child2->intersect(ray, closestTri, shortestDist, depth + 1);
+		if (child1 && child1->boundingBox.intersect(ray, bboxDist))
+			intersection = child1->intersect(ray, closestTri, shortestDist, depth + 1) || intersection;
 
-					if (dist1 < shortestDist)
-						child1->intersect(ray, closestTri, shortestDist, depth + 1);
-				}
+		if (child2 && child2->boundingBox.intersect(ray, bboxDist))
+			intersection = child2->intersect(ray, closestTri, shortestDist, depth + 1) || intersection;
 
-			}
-			//if ray only passes through child1
-			else if (hit1 && !hit2)
-			{
-				if (dist1 < shortestDist)
-					child1->intersect(ray, closestTri, shortestDist, depth + 1);
-			}
-			//if ray only passes through child2
-			else if (hit2 && !hit1)
-			{
-				if (dist2 < shortestDist)
-					child1->intersect(ray, closestTri, shortestDist, depth + 1);
-			}
-			
-		}
-
-		return (shortestDist > 0.0 && shortestDist < 4999);
+		return intersection;
 	}
 
-	int numberOfTris()
+	int numberOfTris(bool recurse = false)
 	{
 		int numTris = tris.size();
-//		numTris += child1->numberOfTris();
-//		numTris += child2->numberOfTris();
+		if (recurse)
+		{
+			if (child1)
+				numTris += child1->numberOfTris(true);
+
+			if (child2)
+				numTris += child2->numberOfTris(true);
+		}
 
 		return numTris;
 	}
@@ -252,13 +236,19 @@ public:
 		cout << endl << string(depth * 3, ' ');
 		boundingBox.maxCoord.printToConsole();
 
+		cout << endl << string(depth * 3, ' ');
+		cout << numberOfTris();
+
 		cout << endl;
 
-		child1->printToConsole(depth + 1);
-		child2->printToConsole(depth + 1);
+		if (child1)
+			child1->printToConsole(depth + 1);
+
+		if (child2)
+			child2->printToConsole(depth + 1);
 
 		//if (depth == 0)
-			cout << numberOfTris() << " total tris" << endl;
+		//	cout << numberOfTris() << " total tris" << endl;
 
 	}
 
@@ -268,3 +258,72 @@ public:
 	{
 	}
 };
+
+
+/*
+buildbboxhierarchy:...
+bestcost = 9999
+stepsize = 0.1
+
+for i = stepsize; i < 1; i++
+getCost(
+*/
+
+/*void buildBboxHierarchy(int depth=0)
+{
+generateBbox();
+
+if (numberOfMeshes() > 3 && depth < 8)
+{
+
+if (depth < 30)
+cout << string(depth*2, ' ') << "Sorting Depth " << depth << endl;
+
+GeoContainer* child1 = new GeoContainer;
+GeoContainer* child2 = new GeoContainer;
+
+for (vector<Mesh*>::iterator m = meshes.begin(); m != meshes.end();)
+{
+if (boundingBox.largestAxis() == 0)
+{
+if ((**m).boundingBox.center()[0] <= center()[0])
+moveMeshToGroup(m, *child1);
+else
+moveMeshToGroup(m, *child2);
+}
+else if (boundingBox.largestAxis() == 1)
+{
+if ((**m).boundingBox.center()[1] <= center()[1])
+moveMeshToGroup(m, *child1);
+else
+moveMeshToGroup(m, *child2);
+}
+else if (boundingBox.largestAxis() == 2)
+{
+if ((**m).boundingBox.center()[2] <= center()[2])
+moveMeshToGroup(m, *child1);
+else
+moveMeshToGroup(m, *child2);
+}
+
+}
+
+(*child1).buildBboxHierarchy(depth + 1);
+(*child2).buildBboxHierarchy(depth + 1);
+
+containers.push_back(move(*child1));
+containers.push_back(move(*child2));
+
+
+(*child1).parent = this;
+(*child2).parent = this;
+
+}//end if num meshes > 2
+
+
+for (vector<Mesh>::iterator m = meshes.begin(); m != meshes.end(); m++)
+{
+(*m).buildBboxHierarchy();
+}
+
+}*/
