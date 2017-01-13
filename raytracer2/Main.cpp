@@ -24,7 +24,10 @@ Pixel renderPixel(Ray& ray, Scene& scene, int depth = 0)
 	Tri* closestTri;
 	bool intersected;
 
-	intersected = scene.intersect(ray, closestTri, shortestDist);
+	int numTriIntersections = 0;
+	int numBoxIntersections = 0;
+
+	intersected = scene.intersect(ray, closestTri, shortestDist, numBoxIntersections, 0);
 	
 #ifdef DEBUG_OUTPUTDIST
 	return Pixel(Color(shortestDist/SCN_MAXDIST), 1);
@@ -48,6 +51,10 @@ Pixel renderPixel(Ray& ray, Scene& scene, int depth = 0)
 	return Pixel(abs(temppos[0]*0.1), abs(temppos[1]*0.1), abs(temppos[2]*0.1), 1);
 #endif
 
+#ifdef DEBUG_OUTPUTINTERSECTIONS
+	return Pixel((double)numBoxIntersections, (double)numBoxIntersections / ((double)depth + 1.0), 0.0, 1.0);
+#endif
+
 	if (intersected){
 		if (depth < SCN_MAXDEPTH && closestTri->mtl->hasDiffuse())
 		{
@@ -56,7 +63,8 @@ Pixel renderPixel(Ray& ray, Scene& scene, int depth = 0)
 			Ray indirectRay;
 			indirectRay.setPos(ray.pos + (ray.dir * shortestDist) + (closestTri->n * SCN_RAYBIAS));
 
-			int numsamples = max(SHD_MAXSAMPLES / (depth + 1), 1);
+			//int numsamples = max(pow((double)SHD_MAXSAMPLES, 1.0/(1.0 + (double)depth)), 1.0);
+			int numsamples = depth == 0 ? SHD_MAXSAMPLES : 1;
 			for (int i = 0; i < numsamples; i++)
 			{
 				do indirectRay.setDir(randfneg(), randfneg(), randfneg());
@@ -140,33 +148,19 @@ int main()
 	srand(12345);
 
 	string objfile = "angel";
-	string rootdir = "C:/Users/Yegor-s/Desktop/raytracer/";
-	/*
-	Scene myScene;
-	Tri* t = new Tri(Vec(1, 1, -15), Vec(-1, 0.5, -15), Vec(-1.2, 0, -15));
-	t->precompute();
-	myScene.child1 = new GeoContainer;
-	myScene.child1->child2 = new GeoContainer;
-	myScene.child1->child2->child1 = new GeoContainer;
-	myScene.child1->child2->child2 = new GeoContainer;
-	myScene.child1->child2->child1->addTri(t);
-	myScene.child1->child2->child2->addTri(t);
-	myScene.child1->child2->child1->generateBbox();
-	myScene.boundingBox = myScene.child1->child2->child1->boundingBox;
-	*/
+	string rootdir = "D:/Users/Yegor/Desktop/raytracer/";
+	
 
 	Scene myScene = readObj(rootdir + "objects/" + objfile + ".obj");
 
 
-//	myScene.skyColor.Ka = { 1.2, 1.4, 2.8 };
+	myScene.skyColor.Ka = { 1.2, 1.4, 2.8 };
 //	myScene.skyColor.Ka *= 0.5;
 	cout << myScene.numberOfTris(true) << " triangles in scene" << endl;
 	myScene.buildBboxHierarchy();
 //	myScene.split(0.5, 2);
 
 	cout << myScene.numberOfTris(true) << " triangles in scene" << endl;
-
-//	myScene.findEmptyChildren();
 
 //	myScene.printToConsole();
 
@@ -177,7 +171,6 @@ int main()
 	clock_t begin = clock();
 	clock_t percent = clock();
 
-	//thread threads[NUM_THREADS];
 
 	//for each row
 	for (int y = 0; y < IMG_H; y++ )
@@ -191,6 +184,7 @@ int main()
 		}
 
 		//for each pixel
+#pragma omp parallel for
 		for (int x = 0; x < IMG_W; x += NUM_THREADS )
 		{
 			for (int t = 0; t < NUM_THREADS && t + x < IMG_W; t++)
@@ -204,7 +198,7 @@ int main()
 			if (_kbhit() && _getch() == 4)
 			{
 				cout << endl << "Render Cancelled.." << endl;
-				goto end_dump;
+//				goto end_dump;
 			}
 
 		}//end for each pixel

@@ -180,7 +180,7 @@ public:
 		}
 	}
 
-	bool intersect(Ray& ray, Tri*& closestTri, double& shortestDist, int depth = 0)
+	bool intersect(Ray& ray, Tri*& closestTri, double& shortestDist, int& numBoxIntersections, int depth = 0)
 	{
 		bool intersection = false;
 
@@ -205,12 +205,17 @@ public:
 
 		double bboxDist;
 
-		if (child1 && child1->boundingBox.intersect(ray, bboxDist))
-			intersection = child1->intersect(ray, closestTri, shortestDist, depth + 1) || intersection;
+		if (child1 && child1->boundingBox.intersect(ray, bboxDist) && bboxDist < shortestDist)
+		{
+			intersection = child1->intersect(ray, closestTri, shortestDist, numBoxIntersections, depth + 1) || intersection;
+			numBoxIntersections++;
+		}
 
-		if (child2 && child2->boundingBox.intersect(ray, bboxDist))
-			intersection = child2->intersect(ray, closestTri, shortestDist, depth + 1) || intersection;
-
+		if (child2 && child2->boundingBox.intersect(ray, bboxDist) && bboxDist < shortestDist)
+		{
+			intersection = child2->intersect(ray, closestTri, shortestDist, numBoxIntersections, depth + 1) || intersection;
+			numBoxIntersections++;
+		}
 		return intersection;
 	}
 

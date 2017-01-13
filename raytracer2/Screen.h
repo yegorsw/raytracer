@@ -93,7 +93,10 @@ public:
 			}
 		}
 
-		
+		maxr = maxr == 0 ? 1 : maxr;
+		maxg = maxg == 0 ? 1 : maxg;
+		maxb = maxb == 0 ? 1 : maxb;
+
 		double maxv = max(maxr, max(maxg, maxb));
 		for (int x = 0; x < xres; x++)
 		{
