@@ -139,7 +139,7 @@ public:
 	{
 		if(depth == 0) 	cout << "Building BVH tree" << endl;
 
-		if (depth < 30 && numberOfTris() > 5)
+		if (depth < 50 && numberOfTris() > 10)
 		{
 			if (depth < 4) cout << string(depth, ' ') << "depth " << depth << endl;
 
@@ -174,8 +174,14 @@ public:
 			if (dosplit)
 			{
 				split(bestSplitPos, bestSplitAxis);
-				child1->buildBboxHierarchy(depth + 1);
-				child2->buildBboxHierarchy(depth + 1);
+				#pragma omp parallel sections // starts a new team
+				{
+					#pragma omp section
+					{child1->buildBboxHierarchy(depth + 1); }
+
+					#pragma omp section
+					{child2->buildBboxHierarchy(depth + 1); }
+				}
 			}
 		}
 	}
@@ -203,19 +209,46 @@ public:
 			}
 		}
 
-		double bboxDist;
+		double child1Dist = SCN_MAXDIST;
+		double child2Dist = SCN_MAXDIST;
 
-		if (child1 && child1->boundingBox.intersect(ray, bboxDist) && bboxDist < shortestDist)
+		bool child1Hit = false;
+		bool child2Hit = false;
+
+		GeoContainer *closerChild, *furtherChild;
+
+		if (child1 && child1->boundingBox.intersect(ray, child1Dist) && child1Dist < shortestDist)
 		{
+			child1Hit = true;
+			numBoxIntersections++;
+		}
+
+		if (child2 && child2->boundingBox.intersect(ray, child2Dist) && child2Dist < shortestDist)
+		{
+			child2Hit = true;
+			numBoxIntersections++;
+		}
+
+		if (child1Hit && child2Hit)
+		{
+			if (child1Dist < child2Dist)
+			{
+				intersection = child1->intersect(ray, closestTri, shortestDist, numBoxIntersections, depth + 1) || intersection;
+				if (child2Dist < shortestDist)
+					intersection = child2->intersect(ray, closestTri, shortestDist, numBoxIntersections, depth + 1) || intersection;
+			}
+			else
+			{
+				intersection = child2->intersect(ray, closestTri, shortestDist, numBoxIntersections, depth + 1) || intersection;
+				if (child1Dist < shortestDist)
+					intersection = child1->intersect(ray, closestTri, shortestDist, numBoxIntersections, depth + 1) || intersection;
+			}
+		}
+		else if (child1Hit)
 			intersection = child1->intersect(ray, closestTri, shortestDist, numBoxIntersections, depth + 1) || intersection;
-			numBoxIntersections++;
-		}
-
-		if (child2 && child2->boundingBox.intersect(ray, bboxDist) && bboxDist < shortestDist)
-		{
+		else if (child2Hit)
 			intersection = child2->intersect(ray, closestTri, shortestDist, numBoxIntersections, depth + 1) || intersection;
-			numBoxIntersections++;
-		}
+
 		return intersection;
 	}
 

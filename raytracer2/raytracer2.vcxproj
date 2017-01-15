@@ -12,6 +12,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="BBox.h" />
+    <ClInclude Include="BRDF.h" />
+    <ClInclude Include="BRDFlambert.h" />
     <ClInclude Include="Color.h" />
     <ClInclude Include="example.h" />
     <ClInclude Include="GeoContainer.h" />

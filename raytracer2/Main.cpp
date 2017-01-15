@@ -99,9 +99,7 @@ Pixel renderPixel(Ray& ray, Scene& scene, int depth = 0)
 
 void renderThread(Scene& scene, Screen& screen, int screenx, int screeny)
 {
-	int sl = 0;
-	double samples;
-	double s = 1;
+	double s = 1.0;
 	Pixel samplePixel, outPixel, prevPixel;
 
 	Ray primaryRay;
@@ -115,13 +113,13 @@ void renderThread(Scene& scene, Screen& screen, int screenx, int screeny)
 		
 		dirx = ((screenx + randfneg() * 0.5 * (SAMP_MAXSAMPLES>1 ? 1 : 0) - 0.5 - IMG_W * 0.5) / (double)IMG_H) * 2;
 		diry = ((screeny + randfneg() * 0.5 * (SAMP_MAXSAMPLES>1 ? 1 : 0) - 0.5 - IMG_H * 0.5) / (double)IMG_H) * -2;
-		primaryRay.setDir(dirx, diry, -4);
+		primaryRay.setDir(dirx, diry, -3);
 		primaryRay.dir.normalize();
 
 		prevPixel = outPixel;
 		samplePixel = renderPixel(primaryRay, scene);
 
-		samplePixel.color *= 2.0;
+//		samplePixel.color *= 2.0;
 		samplePixel.color.clamp(1.0);
 		samplePixel.color.applyGamma(2.2);
 
@@ -147,7 +145,7 @@ int main()
 {
 	srand(12345);
 
-	string objfile = "angel";
+	string objfile = "quadbotsplit";
 	string rootdir = "D:/Users/Yegor/Desktop/raytracer/";
 	
 
@@ -157,7 +155,11 @@ int main()
 	myScene.skyColor.Ka = { 1.2, 1.4, 2.8 };
 //	myScene.skyColor.Ka *= 0.5;
 	cout << myScene.numberOfTris(true) << " triangles in scene" << endl;
+
+	clock_t begin = clock();
 	myScene.buildBboxHierarchy();
+	cout << endl << "Scene build time: " << double(clock() - begin) / CLOCKS_PER_SEC << endl;
+
 //	myScene.split(0.5, 2);
 
 	cout << myScene.numberOfTris(true) << " triangles in scene" << endl;
@@ -168,10 +170,9 @@ int main()
 	
 	cout << endl << "Rendering.. " << endl;
 
-	clock_t begin = clock();
+	begin = clock();
 	clock_t percent = clock();
-
-
+	
 	//for each row
 	for (int y = 0; y < IMG_H; y++ )
 	{
@@ -180,7 +181,7 @@ int main()
 		if (clock() - percent > 1000)
 		{
 			percent = clock();
-			cout << (int)((double)y * 100.0 / (double)IMG_H) << '%' << endl;
+			cout << ((double)y * 100.0 / (double)IMG_H) << '%' << endl;
 		}
 
 		//for each pixel
@@ -189,31 +190,10 @@ int main()
 		{
 			for (int t = 0; t < NUM_THREADS && t + x < IMG_W; t++)
 				renderThread(myScene, myScreen, x + t, y);
-			//	threads[t] = thread(renderThread, myScene, myScreen, x + t, y);
-
-			//for (int t = 0; t < NUM_THREADS && t + x < IMG_W; t++)
-			//	threads[t].join();
-
-			//crtl+d early exit & dump pixels
-			if (_kbhit() && _getch() == 4)
-			{
-				cout << endl << "Render Cancelled.." << endl;
-//				goto end_dump;
-			}
-
 		}//end for each pixel
 	}//end for each row
 	
-	//crtl+d early exit & dump pixels goto point
-	end_dump:
-	
-
-
-	clock_t end = clock();
-	double rendertime = double(end - begin) / CLOCKS_PER_SEC;
-	cout << endl << "Render time: " << rendertime<< endl;
-	//myScreen.invertRGB();
-	//myScreen.constantAlpha();
+	cout << endl << "Render time: " << double(clock() - begin) / CLOCKS_PER_SEC << endl;
 
 #ifdef DEBUG_OUTPUTINTERSECTIONS
 	myScreen.normalizeValues();
@@ -223,7 +203,6 @@ int main()
 #endif
 
 	writePPM(myScreen, rootdir + objfile + ".ppm", "rgba");
-	//myScene.printToConsole();
 }
 
 

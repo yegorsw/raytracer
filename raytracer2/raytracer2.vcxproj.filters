@@ -78,6 +78,12 @@
     <ClInclude Include="Scene.h">
       <Filter>Header Files\classes\3d</Filter>
     </ClInclude>
+    <ClInclude Include="BRDF.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="BRDFlambert.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">

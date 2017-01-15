@@ -48,6 +48,16 @@ public:
 		}
 	}
 
+	Vec inverse()
+	{
+		return Vec(1.0 / p[0], 1.0 / p[1], 1.0 / p[2]);
+	}
+
+	void transformToCoordinateSystem(Vec& xvec, Vec& yvec, Vec& zvec)
+	{
+
+	}
+
 	double dot(Vec &v)
 	{
 		return (p[0] * v.p[0]) + (p[1] * v.p[1]) + (p[2] * v.p[2]);
