@@ -80,7 +80,7 @@ Pixel renderPixel(Ray& ray, Scene& scene, int depth = 0)
 					Pixel nextBounce;
 
 					indirectRay.setPos(ray.pos + (ray.dir * shortestDist) + (closestTri->n * SCN_RAYBIAS));
-					shader->scatterInRandomDirection(indirectRay, closestTri->n);
+					shader->scatterInRandomDirection(indirectRay, ray, closestTri->n);
 
 					nextBounce = renderPixel(indirectRay, scene, depth + 1);
 					nextBounce.color *= shader->getColor();
@@ -168,6 +168,7 @@ int main()
 	Scene myScene = readObj(rootdir + "objects/" + objfile + ".obj");
 
 	myScene.skyColor = { 1.2, 1.4, 2.8 };
+	myScene.skyColor *= 0.4;
 	cout << myScene.numberOfTris(true) << " triangles in scene" << endl;
 
 	clock_t begin = clock();

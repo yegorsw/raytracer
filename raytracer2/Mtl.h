@@ -2,6 +2,7 @@
 #include "Color.h"
 #include "ShaderLambert.h"
 #include "ShaderEmissive.h"
+#include "ShaderReflection.h"
 #include <string>
 
 using namespace std;

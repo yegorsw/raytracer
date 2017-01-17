@@ -83,6 +83,11 @@ void loadMtlFile(string filename, MtlLib* mlib)
 			}
 			else if (splitLine[0] == "Ks")
 			{
+				col = Color(stod(splitLine[1]), stod(splitLine[2]), stod(splitLine[3]));
+				if (col > 0.0)
+				{
+					newMtl.addShader(new ShaderReflection(col));
+				}
 			}
 			else if (splitLine[0] == "Ka")
 			{

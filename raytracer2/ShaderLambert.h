@@ -20,7 +20,7 @@ public:
 		Shader::scatterslight = true;
 	}
 
-	void scatterInRandomDirection(Ray& ray, Vec& n)
+	void scatterInRandomDirection(Ray& ray, Ray& cameraRay, Vec& n)
 	{
 		do ray.setDir(randfneg(), randfneg(), randfneg());
 		while (ray.dir.dot(ray.dir) > 1.0);

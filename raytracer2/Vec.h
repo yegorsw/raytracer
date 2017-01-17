@@ -98,7 +98,7 @@ public:
 			p[2] * v.p[2]
 		);
 	}
-
+	
 	void operator-=(Vec &v)
 	{
 		p[0] -= v.p[0];

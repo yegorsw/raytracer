@@ -26,6 +26,7 @@
     <ClInclude Include="Pixel.h" />
     <ClInclude Include="Point.h" />
     <ClInclude Include="Scene.h" />
+    <ClInclude Include="ShaderReflection.h" />
     <ClInclude Include="Vec.h" />
     <ClInclude Include="Ray.h" />
     <ClInclude Include="Screen.h" />

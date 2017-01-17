@@ -16,7 +16,7 @@ public:
 
 	Color getColor() { return color; }
 
-	virtual void scatterInRandomDirection(Ray& ray, Vec& n) {}
+	virtual void scatterInRandomDirection(Ray& ray, Ray& cameraRay, Vec& n) {}
 
 	double hitChance()
 	{
