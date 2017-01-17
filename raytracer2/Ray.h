@@ -1,11 +1,13 @@
 #pragma once
 #include "Vec.h"
+
 class Ray
 {
 public:
 	Vec pos;
 	Vec dir;
-
+	double b0, b1, b2;
+	
 	Ray()
 	{
 	}

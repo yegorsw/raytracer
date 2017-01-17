@@ -26,11 +26,31 @@ public:
 		b = v;
 	}
 
+	void applyGamma(double gamma)
+	{
+		gamma = 1.0 / gamma;
+		r = pow(r, gamma);
+		g = pow(g, gamma);
+		b = pow(b, gamma);
+	}
+	void clamp(double maximum)
+	{
+		r = r<maximum ? (r>0.0 ? r : 0.0) : maximum;
+		g = g<maximum ? (g>0.0 ? g : 0.0) : maximum;
+		b = b<maximum ? (b>0.0 ? b : 0.0) : maximum;
+	}
+
+
 	void operator*=(double n)
 	{
 		r *= n;
 		g *= n;
 		b *= n;
+	}
+
+	Color operator*(double n)
+	{
+		return Color(r * n, g * n, b * n);
 	}
 
 	void operator*=(Color& c)
@@ -47,19 +67,16 @@ public:
 		b += c.b;
 	}
 
-	void applyGamma(double gamma)
+	bool operator>(Color& c)
 	{
-		gamma = 1.0 / gamma;
-		r = pow(r, gamma);
-		g = pow(g, gamma);
-		b = pow(b, gamma);
+		return r > c.r && g > c.g && b > c.b;
 	}
-	void clamp(double maximum)
+
+	bool operator>(double v)
 	{
-		r = r<maximum ? (r>0.0 ? r : 0.0) : maximum;
-		g = g<maximum ? (g>0.0 ? g : 0.0) : maximum;
-		b = b<maximum ? (b>0.0 ? b : 0.0) : maximum;
+		return r > v && g > v && b > v;
 	}
+
 	~Color()
 	{
 	}

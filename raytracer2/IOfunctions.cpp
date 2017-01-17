@@ -45,20 +45,23 @@ vector<string> split(string &inputString, char splitChar)
 	return outputString;
 }
 
-void loadMtls(string filename, MtlLib* mlib)
+void loadMtlFile(string filename, MtlLib* mlib)
 {
 	cout << "Loading materials from " << filename << endl;
 
 	string line;
 	vector<string> splitLine;
 	ifstream mtlFile(filename);
-	string lastLine = "!temp!";
+	//string lastLine = "!temp!";
 	Mtl newMtl;
 
 	while (getline(mtlFile, line))
 	{
 		splitLine = split(line, ' ');
 		cout << splitLine[1] << endl;
+
+		Color col;
+
 		if (splitLine.size() > 0)
 		{
 			if (splitLine[0] == "newmtl")
@@ -66,20 +69,31 @@ void loadMtls(string filename, MtlLib* mlib)
 				if (newMtl.name != "")
 				{
 					mlib->addMtl(newMtl);
-					Mtl newMtl;
+					newMtl = Mtl();
 				}
 				newMtl.name = splitLine[1];
 			}
 			else if (splitLine[0] == "Kd")
 			{
-				newMtl.Kd = Color(stod(splitLine[1]), stod(splitLine[2]), stod(splitLine[3]));
+				col = Color(stod(splitLine[1]), stod(splitLine[2]), stod(splitLine[3]));
+				if (col > 0.0)
+				{
+					newMtl.addShader(new ShaderLambert(col));
+				}
+			}
+			else if (splitLine[0] == "Ks")
+			{
 			}
 			else if (splitLine[0] == "Ka")
 			{
-				newMtl.Ka = Color(stod(splitLine[1]), stod(splitLine[2]), stod(splitLine[3]));
+				col = Color(stod(splitLine[1]), stod(splitLine[2]), stod(splitLine[3]));
+				if (col > 0.0)
+				{
+					newMtl.addShader(new ShaderEmissive(col));
+				}
 			}
 		}
-		lastLine = splitLine[0];
+		//lastLine = splitLine[0];
 	}
 
 	mlib->addMtl(newMtl);
@@ -106,8 +120,7 @@ Scene readObj(string filename)
 
 	int totalTriCount = 0;
 	int totalMeshCount = 0;
-	//int mtlId = 0;
-	//string currentMat = "";
+
 	int i0, i1, i2;
 	int lineId = 1;
 	while (getline(objFile, line))
@@ -118,11 +131,6 @@ Scene readObj(string filename)
 		{
 			if (splitLine[0] == "v")
 			{
-				/*if (lastLine != "v" && verticies.size() > 0)
-				{
-					verticies.clear();
-					normals.clear();
-				}*/
 				verticies.push_back(Vec(stod(splitLine[1]), stod(splitLine[2]), stod(splitLine[3])));
 			}
 			else if (splitLine[0] == "vn")
@@ -145,7 +153,7 @@ Scene readObj(string filename)
 			}
 			else if (splitLine[0] == "mtllib")
 			{
-				loadMtls(filename.substr(0, filename.size() - 3) + "mtl", mlib);
+				loadMtlFile(filename.substr(0, filename.size() - 3) + "mtl", mlib);
 				newScene.mlib = mlib;
 			}
 			else if (splitLine[0] == "usemtl")

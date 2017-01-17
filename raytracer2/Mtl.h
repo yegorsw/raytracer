@@ -1,5 +1,7 @@
 #pragma once
 #include "Color.h"
+#include "ShaderLambert.h"
+#include "ShaderEmissive.h"
 #include <string>
 
 using namespace std;
@@ -7,27 +9,45 @@ using namespace std;
 class Mtl
 {
 public:
-	Color Kd;
-	Color Ka;
-	string name = "";
+	bool emitslight = false;
+	bool scatterslight = false;
+
+	vector<Shader*> shaderstack;
+
+	string name = "default";
 
 	Mtl()
 	{
-		name = "default";
-		Kd = Color{ 0.18, 0.18, 0.18 };
-		Ka = Color{ 0.0, 0.0, 0.0 };
 	}
 
-	Mtl(string nameIn, Color KdIn, Color KaIn)
+	Mtl(string nameIn)
 	{
 		name = nameIn;
-		Kd = KdIn;
-		Ka = KaIn;
 	}
 
-	bool hasDiffuse()
+	void addShader(Shader* s)
 	{
-		return Kd.r + Kd.g + Kd.b > 0.000001;
+		shaderstack.push_back(s);
+		emitslight = emitslight || s->emitslight;
+		scatterslight = scatterslight || s->scatterslight;
+	}
+
+	Shader* selectShaderStochastically()
+	{
+		Shader* shader = NULL;
+		for (vector<Shader*>::iterator s = shaderstack.begin(); s != shaderstack.end(); s++)
+		{
+			if ((**s).scatterslight && ((**s).hitChance() > 0.9999 || ((**s).hitChance() > 0.0001 && randf() < (**s).hitChance())))
+			{
+				shader = &(**s);
+			}
+		}
+		return shader;
+	}
+
+	Color getLightEmission()
+	{
+
 	}
 
 	~Mtl()

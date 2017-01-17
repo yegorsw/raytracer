@@ -96,6 +96,17 @@ public:
 		a *= inv;
 	}
 
+	void blendOver(Color& c, double& a)
+	{
+		if (a >= 1.0)
+			color = c;
+		else if (a > 0.0)
+		{
+			color *= 1.0 - a;
+			color += c * a;
+		}
+	}
+
 	bool isBlack()
 	{
 		return (color.r == 0.0 && color.g == 0.0 && color.b == 0.0 && a == 0.0);

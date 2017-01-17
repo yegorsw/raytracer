@@ -10,6 +10,7 @@
 #include "Screen.h"
 #include "Scene.h"
 #include "Pixel.h"
+#include "MtlLib.h"
 
 #include "IOfunctions.h"
 #include "globals.h"
@@ -26,8 +27,8 @@ Pixel renderPixel(Ray& ray, Scene& scene, int depth = 0)
 
 	int numTriIntersections = 0;
 	int numBoxIntersections = 0;
-
-	intersected = scene.intersect(ray, closestTri, shortestDist, numBoxIntersections, 0);
+	
+	intersected = scene.intersect(ray, closestTri, shortestDist, numBoxIntersections);
 	
 #ifdef DEBUG_OUTPUTDIST
 	return Pixel(Color(shortestDist/SCN_MAXDIST), 1);
@@ -55,46 +56,66 @@ Pixel renderPixel(Ray& ray, Scene& scene, int depth = 0)
 	return Pixel((double)numBoxIntersections, (double)numBoxIntersections / ((double)depth + 1.0), 0.0, 1.0);
 #endif
 
-	if (intersected){
-		if (depth < SCN_MAXDEPTH && closestTri->mtl->hasDiffuse())
-		{
-			Pixel outPixel;
-			Pixel nextBounce;
-			Ray indirectRay;
-			indirectRay.setPos(ray.pos + (ray.dir * shortestDist) + (closestTri->n * SCN_RAYBIAS));
+	Pixel outPixel(0.0, 0.0, 0.0, 0.0);
 
-			//int numsamples = max(pow((double)SHD_MAXSAMPLES, 1.0/(1.0 + (double)depth)), 1.0);
-			int numsamples = depth == 0 ? SHD_MAXSAMPLES : 1;
+	if (intersected){
+
+		vector<Shader*> &shaderstack = closestTri->mtl->shaderstack;
+
+		//light scatter loop
+		if (depth < SCN_MAXDEPTH && closestTri->mtl->scatterslight)
+		{			
+			bool traceNextBounce = false;
+			const int numsamples = depth == 0 ? SHD_MAXSAMPLES : 1;
+			
+			Shader* shader;
+
 			for (int i = 0; i < numsamples; i++)
 			{
-				do indirectRay.setDir(randfneg(), randfneg(), randfneg());
-				while (indirectRay.dir.dot(indirectRay.dir) > 1.0);
+				shader = closestTri->mtl->selectShaderStochastically();
 
-				indirectRay.dir.normalize();
+				if (shader)
+				{
+					Ray indirectRay;
+					Pixel nextBounce;
 
-				if (indirectRay.dir.dot(closestTri->n) < 0.0)
-					indirectRay.dir = -indirectRay.dir;
-						
-				nextBounce = renderPixel(indirectRay, scene, depth + 1);
-				nextBounce.color *= closestTri->mtl->Kd;
-				nextBounce.color *= indirectRay.dir.dot(closestTri->n);
-				nextBounce.color += closestTri->mtl->Ka;
-				
-				outPixel.color += nextBounce.color;
+					indirectRay.setPos(ray.pos + (ray.dir * shortestDist) + (closestTri->n * SCN_RAYBIAS));
+					shader->scatterInRandomDirection(indirectRay, closestTri->n);
+
+					nextBounce = renderPixel(indirectRay, scene, depth + 1);
+					nextBounce.color *= shader->getColor();
+					nextBounce.color *= indirectRay.dir.dot(closestTri->n);
+
+					outPixel.color += nextBounce.color;
+				}
 			}
 			outPixel /= numsamples;
 			outPixel.a = 1.0;
 			return outPixel;
-		}
-		else//if depth == SCN_MAXDEPTH (last bounce)
+		}//end light scatter loop
+
+		 //light emission loop
+		if (closestTri->mtl->emitslight)
 		{
-			return Pixel(closestTri->mtl->Ka, 1);
+			for (vector<Shader*>::iterator s = shaderstack.begin(); s != shaderstack.end(); s++)
+			{
+				if ((**s).emitslight)
+				{
+					outPixel.color += ((**s).getColor() * (**s).hitChance());
+					outPixel.a += (**s).hitChance();
+				}
+			}//end light emission loop
+			//clamp alpha
+			outPixel.a = outPixel.a < 1.0 ? outPixel.a : 1.0;
+
 		}
 	}
-	else//!intersected, return sky color
+	else //no intersections, return sky color
 	{
-		return Pixel(scene.skyColor.Ka, 0);
+		outPixel.color = scene.skyColor;
 	}
+
+	return outPixel;
 }
 
 void renderThread(Scene& scene, Screen& screen, int screenx, int screeny)
@@ -110,10 +131,9 @@ void renderThread(Scene& scene, Screen& screen, int screenx, int screeny)
 
 	while (varianceCombo < SAMP_MINSAMPLES && s <= SAMP_MAXSAMPLES)
 	{
-		
 		dirx = ((screenx + randfneg() * 0.5 * (SAMP_MAXSAMPLES>1 ? 1 : 0) - 0.5 - IMG_W * 0.5) / (double)IMG_H) * 2;
 		diry = ((screeny + randfneg() * 0.5 * (SAMP_MAXSAMPLES>1 ? 1 : 0) - 0.5 - IMG_H * 0.5) / (double)IMG_H) * -2;
-		primaryRay.setDir(dirx, diry, -3);
+		primaryRay.setDir(dirx, diry, -2);
 		primaryRay.dir.normalize();
 
 		prevPixel = outPixel;
@@ -144,28 +164,16 @@ void renderThread(Scene& scene, Screen& screen, int screenx, int screeny)
 int main()
 {
 	srand(12345);
-
-	string objfile = "quadbotsplit";
-	string rootdir = "D:/Users/Yegor/Desktop/raytracer/";
 	
-
 	Scene myScene = readObj(rootdir + "objects/" + objfile + ".obj");
 
-
-	myScene.skyColor.Ka = { 1.2, 1.4, 2.8 };
-//	myScene.skyColor.Ka *= 0.5;
+	myScene.skyColor = { 1.2, 1.4, 2.8 };
 	cout << myScene.numberOfTris(true) << " triangles in scene" << endl;
 
 	clock_t begin = clock();
 	myScene.buildBboxHierarchy();
 	cout << endl << "Scene build time: " << double(clock() - begin) / CLOCKS_PER_SEC << endl;
-
-//	myScene.split(0.5, 2);
-
-	cout << myScene.numberOfTris(true) << " triangles in scene" << endl;
-
-//	myScene.printToConsole();
-
+	
 	Screen myScreen(IMG_W, IMG_H);
 	
 	cout << endl << "Rendering.. " << endl;
@@ -184,7 +192,7 @@ int main()
 			cout << ((double)y * 100.0 / (double)IMG_H) << '%' << endl;
 		}
 
-		//for each pixel
+		//for each pixel bunch
 #pragma omp parallel for
 		for (int x = 0; x < IMG_W; x += NUM_THREADS )
 		{
@@ -203,6 +211,8 @@ int main()
 #endif
 
 	writePPM(myScreen, rootdir + objfile + ".ppm", "rgba");
+
+	return 0;
 }
 
 
@@ -239,5 +249,3 @@ x = *myPointer;
 same as x = y;
 
 */
-//test1
-//asdfasdhhghgh 

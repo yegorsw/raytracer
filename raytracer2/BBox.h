@@ -129,10 +129,10 @@ public:
 
 	int largestAxis()
 	{
-		int x = maxCoord.p[0] - minCoord.p[0];
-		int y = maxCoord.p[1] - minCoord.p[1];
-		int z = maxCoord.p[2] - minCoord.p[2];
-		int m = max(max(x, y), z);
+		double x = maxCoord.p[0] - minCoord.p[0];
+		double y = maxCoord.p[1] - minCoord.p[1];
+		double z = maxCoord.p[2] - minCoord.p[2];
+		double m = max(max(x, y), z);
 		if (m == x)
 			return 0;
 		if (m == y)

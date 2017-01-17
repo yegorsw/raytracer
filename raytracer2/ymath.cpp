@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <math.h>
+#include "Vec.h"
 
 using namespace std;
 
@@ -22,3 +23,4 @@ double randfneg()
 {
 	return (rand() * (1.0 / (double)RAND_MAX) * 2.0) - 1.0;
 }
+

@@ -7,18 +7,21 @@
 //#define DEBUG_OUTPUTSAMPLES
 //#define DEBUG_OUTPUTINTERSECTIONS
 
+const string objfile = "angel";
+const string rootdir = "c:/Users/Yegor-s/Desktop/raytracer/";
+
 const double SCN_MAXDIST = 1000000000;
 
-const int IMG_W = 1280;
-const int IMG_H = 720;
+const int IMG_W = 600;
+const int IMG_H = 600;
 
 const double SCN_RAYBIAS = 0.001;
 const int SCN_MAXDEPTH = 2;
 
-const int SHD_MAXSAMPLES = 32;
+const int SHD_MAXSAMPLES = 1;
 
-const int SAMP_MINSAMPLES = 16;
-const int SAMP_MAXSAMPLES = 1024;
-const double SAMP_MAXVARIANCE = 0.01;
+const int SAMP_MINSAMPLES = 4;
+const int SAMP_MAXSAMPLES = 32;
+const double SAMP_MAXVARIANCE = 0.1;
 
 const int NUM_THREADS = 16;

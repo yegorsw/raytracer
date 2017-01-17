@@ -194,15 +194,18 @@ public:
 		//intersect all tris first
 		if (numberOfTris() > 0)
 		{
-			double dist;
+			double dist, b1, b2;
 			for (vector<Tri*>::iterator t = tris.begin(); t != tris.end(); t++)
 			{
-				if ((**t).intersect(ray, dist))
+				if ((**t).intersect(ray, dist, b1, b2))
 				{
 					if (dist < shortestDist)
 					{
 						intersection = true;
 						closestTri = *t;
+						ray.b0 = 1.0 - b1 - b2;
+						ray.b1 = b1;
+						ray.b2 = b2;
 						shortestDist = dist;
 					}
 				}

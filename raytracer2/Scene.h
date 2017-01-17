@@ -14,7 +14,7 @@ public:
 	//	vector<Mesh> lights;
 	//	GeoContainer masterContainer; test
 	MtlLib* mlib;
-	Mtl skyColor;
+	Color skyColor;
 
 	Scene()
 	{

@@ -7,15 +7,10 @@ class MtlLib
 private:
 	
 public:
-	vector<Mtl> mtlList;
+	vector<Mtl> mtlList{ Mtl() };
+
 	MtlLib()
 	{
-		Mtl defaultMtl(
-			"default", 
-			Color{ 0.18, 0.18, 0.18 }, 
-			Color{ 0.0, 0.0, 0.0 }
-		);
-		mtlList.push_back(defaultMtl);
 	}
 
 	void addMtl(Mtl mtl)

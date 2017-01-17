@@ -1,16 +1,16 @@
 #pragma once
 #include "Vec.h"
 #include "Ray.h"
-#include "Mtl.h"
 
 #include "globals.h"
+
+class Mtl;
 
 class Tri
 {
 private:
 	Vec edge01;
 	Vec edge02;
-	
 
 public:
 	Mtl* mtl;
@@ -104,7 +104,7 @@ public:
 		return (p0 + p1 + p2) * 0.33333333333333333333333333;
 	}
 
-	bool intersect(Ray& ray, double& dist)
+	bool intersect(Ray& ray, double& dist, double& barycentric1, double& barycentric2)
 	{
 		Vec pvec = ray.dir.cross(edge02);
 		double det = edge01.dot(pvec);
@@ -136,7 +136,15 @@ public:
 
 		dist = edge02.dot(qvec) * invDet;
 		
-		return dist > 0.0;
+		//if positive side of ray hit the triangle
+		if (dist > 0.0)
+		{
+			barycentric1 = b1;
+			barycentric2 = b2;
+			return true;
+		}
+		
+		return false;
 	}
 
 	void printToConsole(){

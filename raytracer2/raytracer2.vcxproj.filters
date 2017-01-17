@@ -78,10 +78,13 @@
     <ClInclude Include="Scene.h">
       <Filter>Header Files\classes\3d</Filter>
     </ClInclude>
-    <ClInclude Include="BRDF.h">
+    <ClInclude Include="Shader.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="BRDFlambert.h">
+    <ClInclude Include="ShaderLambert.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ShaderEmissive.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
