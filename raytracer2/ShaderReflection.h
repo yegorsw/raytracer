@@ -17,13 +17,13 @@ public:
 	ShaderReflection(Color& reflColorIn)
 	{
 		Shader::color = reflColorIn;
-		Shader::alpha = 0.1;
+		Shader::alpha = 0.5;
 		Shader::scatterslight = true;
 	}
 
 	void scatterInRandomDirection(Ray& ray, Ray& cameraRay, Vec& n)
 	{
-		ray.dir = ((n * -2.0 * cameraRay.dir.dot(n)) - cameraRay.dir);
+		ray.dir = (n * (-cameraRay.dir).dot(n) * 2.0) + cameraRay.dir;
 	}
 
 	~ShaderReflection()

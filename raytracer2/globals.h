@@ -7,8 +7,8 @@
 //#define DEBUG_OUTPUTSAMPLES
 //#define DEBUG_OUTPUTINTERSECTIONS
 
-const string objfile = "simpleboxesshaded";
-const string rootdir = "D:/Users/Yegor/Desktop/raytracer/";
+const string objfile = "lampglow";
+const string rootdir = "C:/Users/Yegor-s/Desktop/raytracer/";
 
 const double SCN_MAXDIST = 1000000000;
 
@@ -16,7 +16,7 @@ const int IMG_W = 600;
 const int IMG_H = 600;
 
 const double SCN_RAYBIAS = 0.001;
-const int SCN_MAXDEPTH = 3;
+const int SCN_MAXDEPTH = 10;
 
 const int SHD_MAXSAMPLES = 8;
 
