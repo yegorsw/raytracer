@@ -61,6 +61,7 @@ void loadMtlFile(string filename, MtlLib* mlib)
 		cout << splitLine[1] << endl;
 
 		Color col;
+		Shader* newShader;
 
 		if (splitLine.size() > 0)
 		{
@@ -126,7 +127,7 @@ Scene readObj(string filename)
 	int totalTriCount = 0;
 	int totalMeshCount = 0;
 
-	int i0, i1, i2;
+	int i0, i1, i2, n0, n1, n2;
 	int lineId = 1;
 	while (getline(objFile, line))
 	{
@@ -147,9 +148,12 @@ Scene readObj(string filename)
 				i0 = stoi(split(splitLine[1], '/')[0]) - 1;
 				i1 = stoi(split(splitLine[2], '/')[0]) - 1;
 				i2 = stoi(split(splitLine[3], '/')[0]) - 1;
+				n0 = stoi(split(splitLine[1], '/')[2]) - 1;
+				n1 = stoi(split(splitLine[2], '/')[2]) - 1;
+				n2 = stoi(split(splitLine[3], '/')[2]) - 1;
 				currentTri = new Tri;
 				currentTri->setPoints(verticies[i0], verticies[i1], verticies[i2]);
-				//currentTri.setNormals(normals[i0], normals[i1], normals[i2]);
+				currentTri->setNormals(normals[n0], normals[n1], normals[n2]);
 				currentTri->mtl = currentMtl;
 				currentTri->precompute();
 				newScene.addTri(currentTri);

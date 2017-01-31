@@ -8,16 +8,11 @@ class ShaderLambert :
 {
 public:
 
-	ShaderLambert()
+	ShaderLambert(Color col)
 	{
-		Shader::color = { 0.18 };
+		Shader::color = col;
 		Shader::scatterslight = true;
-	}
-
-	ShaderLambert(Color& diffuseColorIn)
-	{
-		Shader::color = diffuseColorIn;
-		Shader::scatterslight = true;
+		Shader::samples = 8;
 	}
 
 	void scatterInRandomDirection(Ray& ray, Ray& cameraRay, Vec& n)
@@ -30,7 +25,7 @@ public:
 		if (ray.dir.dot(n) < 0.0)
 			ray.dir = -ray.dir;
 	}
-	
+
 	~ShaderLambert()
 	{
 	}

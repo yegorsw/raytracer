@@ -2,23 +2,27 @@
 #include "Shader.h"
 #include "Ray.h"
 #include "ymath.h"
+#include "ShaderFunctions.h"
 
 class ShaderReflection :
 	public Shader
 {
 public:
 
-	ShaderReflection()
+	double ior = 1.5;
+
+	ShaderReflection(Color col)
 	{
-		Shader::color = { 0.5 };
-		Shader::scatterslight = true;
+		color = col;
+		scatterslight = true;
 	}
 
-	ShaderReflection(Color& reflColorIn)
+	Color getScatterColor(Vec& invec, Vec& outvec, Vec& normal)
 	{
-		Shader::color = reflColorIn;
-		Shader::alpha = 0.5;
-		Shader::scatterslight = true;
+//		Vec halfvector = invec + outvec;
+//		halfvector.normalize();
+		double fr = fresnel(invec.dot(normal), 1.0, ior);
+		return color * fr * alpha;
 	}
 
 	void scatterInRandomDirection(Ray& ray, Ray& cameraRay, Vec& n)

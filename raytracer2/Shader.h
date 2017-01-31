@@ -6,6 +6,7 @@ class Shader
 public:
 
 	double alpha = 1.0;
+	int samples = 1;
 	bool emitslight = false;
 	bool scatterslight = false;
 	Color color;
@@ -14,9 +15,16 @@ public:
 	{
 	}
 
-	Color getColor() { return color; }
+	//PDF
+	virtual Color getScatterColor(Vec& invec, Vec& outvec, Vec& normal)
+	{
+		return color;
+	}
 
-	virtual void scatterInRandomDirection(Ray& ray, Ray& cameraRay, Vec& n) {}
+	//BRDF
+	virtual void scatterInRandomDirection(Ray& ray, Ray& cameraRay, Vec& n)
+	{
+	}
 
 	double hitChance()
 	{

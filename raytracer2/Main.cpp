@@ -11,6 +11,7 @@
 #include "Scene.h"
 #include "Pixel.h"
 #include "MtlLib.h"
+#include "ymath.h"
 
 #include "IOfunctions.h"
 #include "globals.h"
@@ -62,46 +63,61 @@ Pixel renderPixel(Ray& ray, Scene& scene, int depth = 0)
 
 		vector<Shader*> &shaderstack = closestTri->mtl->shaderstack;
 
-		//light scatter loop
+		//light scatter block
 		if (depth < SCN_MAXDEPTH && closestTri->mtl->scatterslight)
 		{			
 			bool traceNextBounce = false;
-			const int numsamples = depth == 0 ? SHD_MAXSAMPLES : 1;
-			
-			Shader* shader;
 
-			for (int i = 0; i < numsamples; i++)
+			Ray indirectRay;
+			indirectRay.setPos(ray.pos + (ray.dir * shortestDist) + (closestTri->n * SCN_RAYBIAS));
+
+			Pixel nextBounce;
+			Color remainingLight = 1.0;
+			Color scatterColor;
+
+			Vec normal = (closestTri->n0 * ray.b0) + (closestTri->n1 * ray.b1) + (closestTri->n2 * ray.b2);
+			int numsamples;
+			double alpha = 0;
+
+			for (vector<Shader*>::iterator s = closestTri->mtl->shaderstack.begin();
+				s != closestTri->mtl->shaderstack.end(); 
+				s++
+				)
 			{
-				shader = closestTri->mtl->selectShaderStochastically();
-
-				if (shader)
+				Shader*& shader = *s;
+				if (shader->scatterslight)
 				{
-					Ray indirectRay;
-					Pixel nextBounce;
+					int numsamples = depth > 0 ? 1 : shader->samples;
+					for (int i = 0; i < numsamples; i++)
+					{
+						shader->scatterInRandomDirection(indirectRay, ray, normal);
+						nextBounce = renderPixel(indirectRay, scene, depth + 1);
+						nextBounce.color *= shader->getScatterColor(ray.dir, indirectRay.dir, normal);
+						
+						outPixel.color += nextBounce.color;
+					}
 
-					indirectRay.setPos(ray.pos + (ray.dir * shortestDist) + (closestTri->n * SCN_RAYBIAS));
-					shader->scatterInRandomDirection(indirectRay, ray, closestTri->n);
+					outPixel /= numsamples;
 
-					nextBounce = renderPixel(indirectRay, scene, depth + 1);
-					nextBounce.color *= shader->getColor();
-					nextBounce.color *= indirectRay.dir.dot(closestTri->n);
+					scatterColor = 
+					alpha = (1.0 - alpha) * shader->hitChance();
 
-					outPixel.color += nextBounce.color;
 				}
+				outPixel.a = 1.0;
 			}
-			outPixel /= numsamples;
-			outPixel.a = 1.0;
 			return outPixel;
-		}//end light scatter loop
+		}//end light scatter block
 
 		 //light emission loop
 		if (closestTri->mtl->emitslight)
 		{
+			Ray indirectRay;
+			Vec normal;
 			for (vector<Shader*>::iterator s = shaderstack.begin(); s != shaderstack.end(); s++)
 			{
 				if ((**s).emitslight)
 				{
-					outPixel.color += ((**s).getColor() * (**s).hitChance());
+					outPixel.color += ((**s).getScatterColor(ray.dir, indirectRay.dir, normal) * (**s).hitChance());
 					outPixel.a += (**s).hitChance();
 				}
 			}//end light emission loop
@@ -120,7 +136,7 @@ Pixel renderPixel(Ray& ray, Scene& scene, int depth = 0)
 
 void renderThread(Scene& scene, Screen& screen, int screenx, int screeny)
 {
-	double s = 1.0;
+	int s = 1;
 	Pixel samplePixel, outPixel, prevPixel;
 
 	Ray primaryRay;
@@ -131,9 +147,9 @@ void renderThread(Scene& scene, Screen& screen, int screenx, int screeny)
 
 	while (varianceCombo < SAMP_MINSAMPLES && s <= SAMP_MAXSAMPLES)
 	{
-		dirx = ((screenx + randfneg() * 0.5 * (SAMP_MAXSAMPLES>1 ? 1 : 0) - 0.5 - IMG_W * 0.5) / (double)IMG_H) * 2;
-		diry = ((screeny + randfneg() * 0.5 * (SAMP_MAXSAMPLES>1 ? 1 : 0) - 0.5 - IMG_H * 0.5) / (double)IMG_H) * -2;
-		primaryRay.setDir(dirx, diry, -2);
+		dirx = ((screenx + (haltonRand(s, 2) - 0.5) * (SAMP_MAXSAMPLES>1 ? 1 : 0) - 0.5 - IMG_W * 0.5) / (double)IMG_H) * 2;
+		diry = ((screeny + (haltonRand(s, 3) - 0.5) * (SAMP_MAXSAMPLES>1 ? 1 : 0) - 0.5 - IMG_H * 0.5) / (double)IMG_H) * -2;
+		primaryRay.setDir(dirx, diry, -4);
 		primaryRay.dir.normalize();
 
 		prevPixel = outPixel;

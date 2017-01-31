@@ -12,8 +12,10 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="BBox.h" />
+    <ClInclude Include="resource.h" />
     <ClInclude Include="Shader.h" />
     <ClInclude Include="ShaderEmissive.h" />
+    <ClInclude Include="ShaderFunctions.h" />
     <ClInclude Include="ShaderLambert.h" />
     <ClInclude Include="Color.h" />
     <ClInclude Include="example.h" />
@@ -35,12 +37,16 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="example.cpp" />
+    <ClCompile Include="ShaderFunctions.cpp" />
     <ClCompile Include="IOfunctions.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="ymath.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="ClassDiagram.cd" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="raytracer2.rc" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{D599AFE6-EEB4-41B9-A7F6-7AEF185A88CD}</ProjectGuid>
