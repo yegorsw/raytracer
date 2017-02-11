@@ -1,3 +1,4 @@
 #pragma once
 double fresnel(double dotProduct, double iorCurrent, double iorNext);
-void transformToWorldNormal(Vec & v, Vec & xvec, Vec & yvec, Vec & zvec, double r, double phi);
+Vec reflect(Vec& dir, Vec& normal);
+Vec refract(Vec& dir, Vec& normal, double iorCurrent, double iorNext);

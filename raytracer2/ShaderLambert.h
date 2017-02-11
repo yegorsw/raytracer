@@ -1,6 +1,5 @@
 #pragma once
 #include "Shader.h"
-#include "Ray.h"
 #include "ymath.h"
 
 class ShaderLambert :
@@ -15,15 +14,24 @@ public:
 		Shader::samples = 8;
 	}
 
-	void scatterInRandomDirection(Ray& ray, Ray& cameraRay, Vec& n)
+	void scatterInRandomDirection(SampleInfo& SI)
 	{
-		do ray.setDir(randfneg(), randfneg(), randfneg());
-		while (ray.dir.dot(ray.dir) > 1.0);
+		double rand1, rand2;
+		SI.sampleGenerator->getNextSample(rand1, rand2);
 
-		ray.dir.normalize();
+		double r = rand1;
+		double phi = rand2 * 2 * PI;
 
-		if (ray.dir.dot(n) < 0.0)
-			ray.dir = -ray.dir;
+		//cosine weighting
+		r = cos(r * 0.5 * PI);
+
+		double x = r * sin(phi);
+		double y = r * cos(phi);
+		double z = sqrt(1.0 - r * r);
+
+		SI.outRay->setDir(x, y, z);
+
+		SI.outRay->dir.transformTo(*SI.xaxis, *SI.yaxis, *SI.normal);
 	}
 
 	~ShaderLambert()

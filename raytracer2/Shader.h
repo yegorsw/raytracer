@@ -1,6 +1,6 @@
 #pragma once
-#include "Ray.h"
 #include "Color.h"
+#include "SampleInfo.h"
 class Shader
 {
 public:
@@ -16,14 +16,19 @@ public:
 	}
 
 	//PDF
-	virtual Color getScatterColor(Vec& invec, Vec& outvec, Vec& normal)
+	virtual Color getScatterColor(SampleInfo& SI)
 	{
 		return color;
 	}
 
 	//BRDF
-	virtual void scatterInRandomDirection(Ray& ray, Ray& cameraRay, Vec& n)
+	virtual void scatterInRandomDirection(SampleInfo& SI)
 	{
+	}
+
+	virtual int getNumSamples()
+	{
+		return samples;
 	}
 
 	double hitChance()
@@ -31,7 +36,7 @@ public:
 		return alpha;
 	}
 
-	~Shader()
+	virtual ~Shader()
 	{
 	}
 };

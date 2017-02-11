@@ -28,9 +28,14 @@ public:
 		p[2] = zIn;
 	}
 
+	double squaredLength()
+	{
+		return p[0] * p[0] + p[1] * p[1] + p[2] * p[2];
+	}
+
 	double length()
 	{
-		return sqrt(p[0]*p[0] + p[1]*p[1] + p[2]*p[2]);
+		return sqrt(squaredLength());
 	}
 
 	void normalize()
@@ -53,9 +58,15 @@ public:
 		return Vec(1.0 / p[0], 1.0 / p[1], 1.0 / p[2]);
 	}
 
-	void transformToCoordinateSystem(Vec& xvec, Vec& yvec, Vec& zvec)
+	void transformTo(Vec& xvec, Vec& yvec, Vec& zvec)
 	{
-
+		double x = p[0];
+		double y = p[1];
+		double z = p[2];
+		for (int axis = 0; axis < 3; axis++)
+		{
+			p[axis] = (xvec.p[axis] * x) + (yvec.p[axis] * y) + (zvec.p[axis] * z);
+		}
 	}
 
 	double dot(Vec &v)
@@ -156,3 +167,11 @@ public:
 	}
 };
 
+inline void generateBasisFromZ(Vec& xaxis, Vec& yaxis, Vec& zaxis)
+{
+	xaxis = zaxis.p[0] > 0.9 ? Vec(0, 1, 0) : Vec(1, 0, 0);
+	xaxis = zaxis.cross(xaxis);
+	xaxis.normalize();
+	yaxis = zaxis.cross(xaxis);
+	yaxis.normalize();
+}

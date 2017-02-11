@@ -1,5 +1,6 @@
 #include <math.h>
 #include "Vec.h"
+#include "ShaderFunctions.h"
 double fresnel(double dotProduct, double iorCurrent, double iorNext)
 {
 	double r = (iorCurrent - iorNext) / (iorCurrent + iorNext);
@@ -9,7 +10,12 @@ double fresnel(double dotProduct, double iorCurrent, double iorNext)
 	return r;
 }
 
-void transformToWorldNormal(Vec & v, Vec & xvec, Vec & yvec, Vec & zvec, double r, double phi)
+Vec reflect(Vec& dir, Vec& normal)
+{
+	return (normal * (-dir).dot(normal) * 2.0) + dir;
+}
+
+Vec refract(Vec& dir, Vec& normal, double iorCurrent, double iorNext)
 {
 
 }

@@ -4,13 +4,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctime>
-#include <thread>
+#include <omp.h>
 
 #include "Ray.h"
 #include "Screen.h"
 #include "Scene.h"
-#include "Pixel.h"
-#include "MtlLib.h"
+#include "SamplerRandom.h"
+#include "SamplerHalton.h"
 #include "ymath.h"
 
 #include "IOfunctions.h"
@@ -61,46 +61,60 @@ Pixel renderPixel(Ray& ray, Scene& scene, int depth = 0)
 
 	if (intersected){
 
+		SampleInfo SI;
+		SamplerRandom sampleGenerator;
+		//SamplerHalton sampleGenerator = { rand(), 2, 3 };
+
+		SI.sampleGenerator = &sampleGenerator;
+
 		vector<Shader*> &shaderstack = closestTri->mtl->shaderstack;
 
 		//light scatter block
 		if (depth < SCN_MAXDEPTH && closestTri->mtl->scatterslight)
 		{			
-			bool traceNextBounce = false;
-
 			Ray indirectRay;
 			indirectRay.setPos(ray.pos + (ray.dir * shortestDist) + (closestTri->n * SCN_RAYBIAS));
 
 			Pixel nextBounce;
-			Color remainingLight = 1.0;
 			Color scatterColor;
 
 			Vec normal = (closestTri->n0 * ray.b0) + (closestTri->n1 * ray.b1) + (closestTri->n2 * ray.b2);
-			int numsamples;
 			double alpha = 0;
 
-			for (vector<Shader*>::iterator s = closestTri->mtl->shaderstack.begin();
-				s != closestTri->mtl->shaderstack.end(); 
-				s++
-				)
+			SI.normal = &normal;
+			SI.geoNormal = &closestTri->n;
+			SI.inRay = &ray;
+			SI.outRay = &indirectRay;
+
+			Vec xaxis, yaxis;
+			generateBasisFromZ(xaxis, yaxis, normal);
+
+			SI.xaxis = &xaxis;
+			SI.yaxis = &yaxis;
+
+			for (vector<Shader*>::iterator s = shaderstack.begin();	s != shaderstack.end(); s++)
 			{
 				Shader*& shader = *s;
 				if (shader->scatterslight)
 				{
-					int numsamples = depth > 0 ? 1 : shader->samples;
+					int numsamples = depth > 0 ? 1 : shader->getNumSamples();
 					for (int i = 0; i < numsamples; i++)
 					{
-						shader->scatterInRandomDirection(indirectRay, ray, normal);
-						nextBounce = renderPixel(indirectRay, scene, depth + 1);
-						nextBounce.color *= shader->getScatterColor(ray.dir, indirectRay.dir, normal);
-						
-						outPixel.color += nextBounce.color;
+						shader->scatterInRandomDirection(SI);
+						scatterColor = shader->getScatterColor(SI);
+
+						if (!scatterColor.isBlack())
+						{
+							nextBounce = renderPixel(indirectRay, scene, depth + 1);
+							nextBounce.color *= scatterColor;
+
+							outPixel.color += nextBounce.color;
+						}
 					}
 
 					outPixel /= numsamples;
 
-					scatterColor = 
-					alpha = (1.0 - alpha) * shader->hitChance();
+					scatterColor = alpha = (1.0 - alpha) * shader->hitChance();
 
 				}
 				outPixel.a = 1.0;
@@ -117,7 +131,7 @@ Pixel renderPixel(Ray& ray, Scene& scene, int depth = 0)
 			{
 				if ((**s).emitslight)
 				{
-					outPixel.color += ((**s).getScatterColor(ray.dir, indirectRay.dir, normal) * (**s).hitChance());
+					outPixel.color += ((**s).getScatterColor(SI) * (**s).hitChance());
 					outPixel.a += (**s).hitChance();
 				}
 			}//end light emission loop
@@ -144,12 +158,17 @@ void renderThread(Scene& scene, Screen& screen, int screenx, int screeny)
 	int varianceCombo = 0;
 
 	double dirx, diry;
+	double xoffset, yoffset;
+
+	//SamplerHalton aaSampler = { rand(), 2, 3 };
+	SamplerRandom aaSampler;
 
 	while (varianceCombo < SAMP_MINSAMPLES && s <= SAMP_MAXSAMPLES)
 	{
-		dirx = ((screenx + (haltonRand(s, 2) - 0.5) * (SAMP_MAXSAMPLES>1 ? 1 : 0) - 0.5 - IMG_W * 0.5) / (double)IMG_H) * 2;
-		diry = ((screeny + (haltonRand(s, 3) - 0.5) * (SAMP_MAXSAMPLES>1 ? 1 : 0) - 0.5 - IMG_H * 0.5) / (double)IMG_H) * -2;
-		primaryRay.setDir(dirx, diry, -4);
+		aaSampler.getNextSample(xoffset, yoffset);
+		dirx = ((screenx + (xoffset - 0.5) * (SAMP_MAXSAMPLES>1 ? 1 : 0) - 0.5 - IMG_W * 0.5) / (double)IMG_H) * 2;
+		diry = ((screeny + (yoffset - 0.5) * (SAMP_MAXSAMPLES>1 ? 1 : 0) - 0.5 - IMG_H * 0.5) / (double)IMG_H) * -2;
+		primaryRay.setDir(dirx, diry, -5);
 		primaryRay.dir.normalize();
 
 		prevPixel = outPixel;
@@ -175,6 +194,7 @@ void renderThread(Scene& scene, Screen& screen, int screenx, int screeny)
 			varianceCombo = 0;
 	}
 	screen.setPixel(screenx, screeny, outPixel);
+	//cout << endl << fastrand(clock()*(omp_get_thread_num()+1)) << endl;
 }
 
 int main()
@@ -210,13 +230,18 @@ int main()
 		}
 
 		//for each pixel bunch
-#pragma omp parallel for
-		for (int x = 0; x < IMG_W; x += NUM_THREADS )
+		#pragma omp parallel 
 		{
-			for (int t = 0; t < NUM_THREADS && t + x < IMG_W; t++)
-				renderThread(myScene, myScreen, x + t, y);
-		}//end for each pixel
-	}//end for each row
+			#pragma omp for
+			for (int x = 0; x < IMG_W; x += NUM_THREADS)//for each row
+			{
+				for (int t = 0; t < NUM_THREADS && t + x < IMG_W; t++)//for each strip
+				{
+					renderThread(myScene, myScreen, x + t, y);
+				}
+			}
+		}
+	}
 	
 	cout << endl << "Render time: " << double(clock() - begin) / CLOCKS_PER_SEC << endl;
 

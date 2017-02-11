@@ -12,7 +12,11 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="BBox.h" />
+    <ClInclude Include="Sampler2d.h" />
     <ClInclude Include="resource.h" />
+    <ClInclude Include="SampleInfo.h" />
+    <ClInclude Include="SamplerHalton.h" />
+    <ClInclude Include="SamplerRandom.h" />
     <ClInclude Include="Shader.h" />
     <ClInclude Include="ShaderEmissive.h" />
     <ClInclude Include="ShaderFunctions.h" />

@@ -1,4 +1,6 @@
 #pragma once
+#include <algorithm>
+
 class Color
 {
 public:
@@ -40,6 +42,10 @@ public:
 		b = b<maximum ? (b>0.0 ? b : 0.0) : maximum;
 	}
 
+	bool isBlack()
+	{
+		return r <= 0 && g <= 0 && b <= 0;
+	}
 
 	void operator*=(double n)
 	{

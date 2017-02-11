@@ -25,6 +25,16 @@ double randfneg()
 	return (rand() * (1.0 / (double)RAND_MAX) * 2.0) - 1.0;
 }
 
+int fastrand(int seed)
+{
+	for (int i = 0; i < 5; i++)
+	{
+		seed = (214013 * seed + 2531011);
+		seed = (seed >> 16) & 0x7FFF;
+	}
+	return seed;
+}
+
 double haltonRand(int i, int base)
 {
 	double result = 0;

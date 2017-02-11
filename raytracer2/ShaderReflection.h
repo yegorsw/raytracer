@@ -17,17 +17,15 @@ public:
 		scatterslight = true;
 	}
 
-	Color getScatterColor(Vec& invec, Vec& outvec, Vec& normal)
+	Color getScatterColor(SampleInfo& SI)
 	{
-//		Vec halfvector = invec + outvec;
-//		halfvector.normalize();
-		double fr = fresnel(invec.dot(normal), 1.0, ior);
+		double fr = fresnel(SI.inRay->dir.dot(*SI.normal), 1.0, ior);
 		return color * fr * alpha;
 	}
 
-	void scatterInRandomDirection(Ray& ray, Ray& cameraRay, Vec& n)
+	void scatterInRandomDirection(SampleInfo& SI)
 	{
-		ray.dir = (n * (-cameraRay.dir).dot(n) * 2.0) + cameraRay.dir;
+		SI.outRay->dir = (*SI.normal * (-SI.inRay->dir).dot(*SI.normal) * 2.0) + SI.inRay->dir;
 	}
 
 	~ShaderReflection()
@@ -35,3 +33,5 @@ public:
 	}
 };
 
+//		Vec halfvector = invec + outvec;
+//		halfvector.normalize();
