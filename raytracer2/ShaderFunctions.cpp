@@ -17,5 +17,11 @@ Vec reflect(Vec& dir, Vec& normal)
 
 Vec refract(Vec& dir, Vec& normal, double iorCurrent, double iorNext)
 {
-
+	double eta = iorCurrent / iorNext;
+	double facingRatio = dir.dot(normal);
+	double k = 1.0 - eta*eta * (1.0 - facingRatio * facingRatio);
+	Vec d = (dir*0.8 + normal*0.2);
+	d.normalize();
+	return d;
+	return (dir * eta) - (normal * (dir * eta - normal * (eta * facingRatio + sqrt(k))));
 }

@@ -13,7 +13,7 @@ double clamp(double n, double minValue, double maxValue)
 	return n;
 }
 
-//convert int to string and pad (python zfill()) - '4' -> "0004"
+//convert int to string and pad (python zfill()) - '7' -> "0007"
 string padInt(int nIn)
 {
 	string n = to_string(nIn);
@@ -96,6 +96,17 @@ void loadMtlFile(string filename, MtlLib* mlib)
 				if (col > 0.0)
 				{
 					newMtl.addShader(new ShaderEmissive(col));
+				}
+			}
+			else if (splitLine[0] == "Tf")
+			{
+				col = Color(stod(splitLine[1]), stod(splitLine[2]), stod(splitLine[3]));
+				col *= -1;
+				col += Color(1.0);
+
+				if (col > 0.00001)
+				{
+					newMtl.addShader(new ShaderRefraction(col));
 				}
 			}
 		}

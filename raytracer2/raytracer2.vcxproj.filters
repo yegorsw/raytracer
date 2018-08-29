@@ -108,6 +108,9 @@
     <ClInclude Include="SamplerHalton.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="ShaderRefraction.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">

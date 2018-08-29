@@ -42,6 +42,11 @@ public:
 		b = b<maximum ? (b>0.0 ? b : 0.0) : maximum;
 	}
 
+	double max()
+	{
+		return std::max(r, std::max(g, b));
+	}
+
 	bool isBlack()
 	{
 		return r <= 0 && g <= 0 && b <= 0;
@@ -59,6 +64,17 @@ public:
 		return Color(r * n, g * n, b * n);
 	}
 
+	Color operator*(Color& c)
+	{
+		return Color(r * c.r, g * c.g, b * c.b);
+	}
+
+	Color operator/(double n)
+	{
+		n = 1.0 / n;
+		return Color(r * n, g * n, b * n);
+	}
+
 	void operator*=(Color& c)
 	{
 		r *= c.r;
@@ -73,14 +89,21 @@ public:
 		b += c.b;
 	}
 
+	void operator-=(Color& c)
+	{
+		r -= c.r;
+		g -= c.g;
+		b -= c.b;
+	}
+
 	bool operator>(Color& c)
 	{
-		return r > c.r && g > c.g && b > c.b;
+		return r > c.r || g > c.g || b > c.b;
 	}
 
 	bool operator>(double v)
 	{
-		return r > v && g > v && b > v;
+		return r > v || g > v || b > v;
 	}
 
 	~Color()

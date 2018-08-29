@@ -63,10 +63,10 @@ public:
 		double x = p[0];
 		double y = p[1];
 		double z = p[2];
-		for (int axis = 0; axis < 3; axis++)
-		{
-			p[axis] = (xvec.p[axis] * x) + (yvec.p[axis] * y) + (zvec.p[axis] * z);
-		}
+		Vec v = (xvec * x + yvec * y + zvec * z);
+		p[0] = v.p[0];
+		p[1] = v.p[1];
+		p[2] = v.p[2];
 	}
 
 	double dot(Vec &v)

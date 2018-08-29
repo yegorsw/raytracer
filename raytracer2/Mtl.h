@@ -3,6 +3,7 @@
 #include "ShaderLambert.h"
 #include "ShaderEmissive.h"
 #include "ShaderReflection.h"
+#include "ShaderRefraction.h"
 #include <string>
 
 using namespace std;

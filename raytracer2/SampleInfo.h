@@ -13,6 +13,7 @@ public:
 	Ray* outRay;
 	Vec* normal;
 	Vec* geoNormal;
+	Vec* hitPos;
 
 	//rng/dmc sample generator
 	Sampler2d* sampleGenerator;

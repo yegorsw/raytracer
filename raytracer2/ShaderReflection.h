@@ -9,7 +9,7 @@ class ShaderReflection :
 {
 public:
 
-	double ior = 1.5;
+	double ior = 1.6;
 
 	ShaderReflection(Color col)
 	{
@@ -19,13 +19,16 @@ public:
 
 	Color getScatterColor(SampleInfo& SI)
 	{
-		double fr = fresnel(SI.inRay->dir.dot(*SI.normal), 1.0, ior);
-		return color * fr * alpha;
+		double d = SI.inRay->dir.dot(*SI.normal);
+		if (d > 0)
+			return Color(0);
+		double fr = fresnel(d, 1.0, ior);
+		return color * fr;
 	}
 
 	void scatterInRandomDirection(SampleInfo& SI)
 	{
-		SI.outRay->dir = (*SI.normal * (-SI.inRay->dir).dot(*SI.normal) * 2.0) + SI.inRay->dir;
+		SI.outRay->dir = reflect(SI.inRay->dir, *SI.normal);
 	}
 
 	~ShaderReflection()
